@@ -50,7 +50,7 @@
 #include "exploration_path/exploration_path.h"
 #include "local_coverage_planner/local_coverage_planner.h"
 #include "tare_visualizer/tare_visualizer.h"
-#include "rolling_occupancy_grid/rolling_occupancy_grid.h"
+#include <tare_planner_interfaces/msg/keypose_graph.hpp>
 
 #define cursup "\033[A"
 #define cursclean "\033[2K"
@@ -188,12 +188,14 @@ private:
   std::string sub_coverage_boundary_topic_;
   std::string sub_viewpoint_boundary_topic_;
   std::string sub_nogo_boundary_topic_;
+  std::string sub_keypose_graph_topic_;
 
   std::string pub_exploration_finish_topic_;
   std::string pub_runtime_breakdown_topic_;
   std::string pub_runtime_topic_;
   std::string pub_waypoint_topic_;
   std::string pub_momentum_activation_count_topic_;
+  std::string pub_keypose_graph_topic_;
 
   // Bool
   bool kAutoStart;
@@ -251,6 +253,7 @@ private:
   Eigen::Vector3d initial_position_;
 
   std::shared_ptr<keypose_graph_ns::KeyposeGraph> keypose_graph_;
+  std::shared_ptr<keypose_graph_ns::KeyposeGraph> published_keypose_graph_;
   std::shared_ptr<planning_env_ns::PlanningEnv> planning_env_;
   std::shared_ptr<viewpoint_manager_ns::ViewPointManager> viewpoint_manager_;
   std::shared_ptr<local_coverage_planner_ns::LocalCoveragePlanner> local_coverage_planner_;
@@ -276,6 +279,7 @@ private:
   bool step_;
   bool use_momentum_;
   bool lookahead_point_in_line_of_sight_;
+  bool keypose_graph_updated_;
   // PlannerParameters pp_;
   // PlannerData pd_;
   pointcloud_utils_ns::PointCloudDownsizer<pcl::PointXYZ> pointcloud_downsizer_;
@@ -306,6 +310,7 @@ private:
   rclcpp::Subscription<geometry_msgs::msg::PolygonStamped>::SharedPtr coverage_boundary_sub_;
   rclcpp::Subscription<geometry_msgs::msg::PolygonStamped>::SharedPtr viewpoint_boundary_sub_;
   rclcpp::Subscription<geometry_msgs::msg::PolygonStamped>::SharedPtr nogo_boundary_sub_;
+  rclcpp::Subscription<tare_planner_interfaces::msg::KeyposeGraph>::SharedPtr keypose_graph_sub_;
 
   // ROS publishers
   rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr global_path_full_publisher_;
@@ -319,6 +324,7 @@ private:
   rclcpp::Publisher<std_msgs::msg::Int32MultiArray>::SharedPtr runtime_breakdown_pub_;
   rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr runtime_pub_;
   rclcpp::Publisher<std_msgs::msg::Int32>::SharedPtr momentum_activation_count_pub_;
+  rclcpp::Publisher<tare_planner_interfaces::msg::KeyposeGraph>::SharedPtr keypose_graph_pub_;
   // Debug
   rclcpp::Publisher<geometry_msgs::msg::PointStamped>::SharedPtr pointcloud_manager_neighbor_cells_origin_pub_;
 
@@ -334,6 +340,7 @@ private:
   void CoverageBoundaryCallback(const geometry_msgs::msg::PolygonStamped::ConstSharedPtr polygon_msg);
   void ViewPointBoundaryCallback(const geometry_msgs::msg::PolygonStamped::ConstSharedPtr polygon_msg);
   void NogoBoundaryCallback(const geometry_msgs::msg::PolygonStamped::ConstSharedPtr polygon_msg);
+  void KeyposeGraphCallback(const tare_planner_interfaces::msg::KeyposeGraph::ConstSharedPtr keypose_graph_msg);
 
   void SendInitialWaypoint();
   void UpdateKeyposeGraph();

@@ -2,8 +2,7 @@
 // Created by caochao on 12/31/19.
 //
 
-#ifndef SENSOR_COVERAGE_PLANNER_KEYPOSE_GRAPH_H
-#define SENSOR_COVERAGE_PLANNER_KEYPOSE_GRAPH_H
+#pragma once
 
 #include <functional>
 #include <memory>
@@ -16,6 +15,8 @@
 #include <nav_msgs/msg/odometry.hpp>
 #include <nav_msgs/msg/path.hpp>
 #include <visualization_msgs/msg/marker.hpp>
+#include <tare_planner_interfaces/msg/keypose_node.hpp>
+#include <tare_planner_interfaces/msg/keypose_graph.hpp>
 
 #include <pcl/kdtree/kdtree_flann.h>
 #include <pcl/point_cloud.h>
@@ -51,7 +52,9 @@ public:
   explicit KeyposeNode(double x = 0, double y = 0, double z = 0, int node_ind = 0, int keypose_id = 0,
                        bool is_keypose = true);
   explicit KeyposeNode(const geometry_msgs::msg::Point& point, int node_ind = 0, int keypose_id = 0, bool is_keypose = true);
+  explicit KeyposeNode(const tare_planner_interfaces::msg::KeyposeNode& msg);
   ~KeyposeNode() = default;
+  tare_planner_interfaces::msg::KeyposeNode ToMsg() const;
   bool IsKeypose() const
   {
     return is_keypose_;
@@ -80,9 +83,7 @@ private:
   geometry_msgs::msg::Point current_keypose_position_;
   std::vector<std::vector<int>> graph_;
   std::vector<std::vector<double>> dist_;
-  std::vector<bool> in_local_planning_horizon_;
   std::vector<KeyposeNode> nodes_;
-  std::vector<geometry_msgs::msg::Point> node_positions_;
   pcl::KdTreeFLANN<pcl::PointXYZI>::Ptr kdtree_connected_nodes_;
   pcl::PointCloud<pcl::PointXYZI>::Ptr connected_nodes_cloud_;
   pcl::KdTreeFLANN<pcl::PointXYZI>::Ptr kdtree_nodes_;
@@ -107,6 +108,8 @@ private:
 public:
   KeyposeGraph(rclcpp::Node::SharedPtr nh);
   ~KeyposeGraph() = default;
+  void FromMsg(const tare_planner_interfaces::msg::KeyposeGraph& msg);
+  tare_planner_interfaces::msg::KeyposeGraph ToMsg() const;
   void ReadParameters(rclcpp::Node::SharedPtr nh);
   void AddNode(const geometry_msgs::msg::Point& position, int node_ind, int keypose_id, bool is_keypose);
   void AddNodeAndEdge(const geometry_msgs::msg::Point& position, int node_ind, int keypose_id, bool is_keypose,
@@ -191,5 +194,3 @@ public:
   void GetKeyposePositions(std::vector<Eigen::Vector3d>& positions);
   geometry_msgs::msg::Point GetNodePosition(int node_ind);
 };
-
-#endif  // SENSOR_COVERAGE_PLANNER_KEYPOSE_GRAPH_H

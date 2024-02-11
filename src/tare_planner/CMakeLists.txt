@@ -29,6 +29,7 @@ find_package(PCL REQUIRED)
 find_package(pcl_conversions REQUIRED)
 find_package(pcl_ros REQUIRED)
 find_package(Eigen3 REQUIRED)
+find_package(tare_planner_interfaces REQUIRED)
 
  include_directories(
   ${catkin_INCLUDE_DIRS}
@@ -82,7 +83,7 @@ ament_target_dependencies(rolling_grid rclcpp std_msgs nav_msgs geometry_msgs se
 target_link_libraries(rolling_grid ${catkin_LIBRARIES} misc_utils pointcloud_utils)
 
 add_library(viewpoint_manager src/viewpoint_manager/viewpoint_manager.cpp)
-ament_target_dependencies(viewpoint_manager rclcpp std_msgs nav_msgs geometry_msgs sensor_msgs tf2_ros tf2_geometry_msgs tf2)
+ament_target_dependencies(viewpoint_manager rclcpp std_msgs nav_msgs geometry_msgs sensor_msgs tf2_ros tf2_geometry_msgs tf2 tare_planner_interfaces)
 target_link_libraries(viewpoint_manager ${catkin_LIBRARIES} rolling_grid viewpoint grid_world)
 
 add_library(local_coverage_planner src/local_coverage_planner/local_coverage_planner.cpp)
@@ -90,7 +91,7 @@ ament_target_dependencies(local_coverage_planner rclcpp std_msgs nav_msgs geomet
 target_link_libraries(local_coverage_planner ${catkin_LIBRARIES} viewpoint_manager)
 
 add_library(grid_world src/grid_world/grid_world.cpp)
-ament_target_dependencies(grid_world rclcpp std_msgs nav_msgs geometry_msgs sensor_msgs tf2_ros tf2_geometry_msgs tf2)
+ament_target_dependencies(grid_world rclcpp std_msgs nav_msgs geometry_msgs sensor_msgs tf2_ros tf2_geometry_msgs tf2 tare_planner_interfaces)
 target_link_libraries(grid_world ${catkin_LIBRARIES} viewpoint_manager tsp_solver keypose_graph exploration_path)
 
 add_library(pointcloud_manager src/pointcloud_manager/pointcloud_manager.cpp)
@@ -98,7 +99,7 @@ ament_target_dependencies(pointcloud_manager rclcpp std_msgs nav_msgs geometry_m
 target_link_libraries(pointcloud_manager ${catkin_LIBRARIES})
 
 add_library(keypose_graph src/keypose_graph/keypose_graph.cpp)
-ament_target_dependencies(keypose_graph rclcpp std_msgs nav_msgs geometry_msgs sensor_msgs tf2_ros tf2_geometry_msgs tf2)
+ament_target_dependencies(keypose_graph rclcpp std_msgs nav_msgs geometry_msgs sensor_msgs tf2_ros tf2_geometry_msgs tf2 tare_planner_interfaces)
 target_link_libraries(keypose_graph ${catkin_LIBRARIES} ${PCL_LIBRARIES} viewpoint_manager)
 
 add_library(rolling_occupancy_grid src/rolling_occupancy_grid/rolling_occupancy_grid.cpp)
@@ -106,19 +107,19 @@ ament_target_dependencies(rolling_occupancy_grid rclcpp std_msgs nav_msgs geomet
 target_link_libraries(rolling_occupancy_grid ${catkin_LIBRARIES})
 
 add_library(planning_env src/planning_env/planning_env.cpp)
-ament_target_dependencies(planning_env rclcpp std_msgs nav_msgs geometry_msgs sensor_msgs tf2_ros tf2_geometry_msgs tf2)
-target_link_libraries(planning_env ${catkin_LIBRARIES} ${PCL_LIBRARIES} rolling_occupancy_grid)
+ament_target_dependencies(planning_env rclcpp std_msgs nav_msgs geometry_msgs sensor_msgs tf2_ros tf2_geometry_msgs tf2 tare_planner_interfaces)
+target_link_libraries(planning_env ${catkin_LIBRARIES} ${PCL_LIBRARIES} rolling_occupancy_grid viewpoint_manager)
 
 add_library(exploration_path src/exploration_path/exploration_path.cpp)
 ament_target_dependencies(exploration_path rclcpp std_msgs nav_msgs geometry_msgs sensor_msgs tf2_ros tf2_geometry_msgs tf2 pcl_ros pcl_conversions visualization_msgs)
 target_link_libraries(exploration_path ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 
 add_library(tare_visualizer src/tare_visualizer/tare_visualizer.cpp)
-ament_target_dependencies(tare_visualizer rclcpp std_msgs nav_msgs geometry_msgs sensor_msgs tf2_ros tf2_geometry_msgs tf2 pcl_ros pcl_conversions visualization_msgs)
-target_link_libraries(tare_visualizer ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+ament_target_dependencies(tare_visualizer rclcpp std_msgs nav_msgs geometry_msgs sensor_msgs tf2_ros tf2_geometry_msgs tf2 pcl_ros pcl_conversions visualization_msgs tare_planner_interfaces)
+target_link_libraries(tare_visualizer ${catkin_LIBRARIES} ${PCL_LIBRARIES} grid_world)
 
 add_library(sensor_coverage_planner_ground src/sensor_coverage_planner/sensor_coverage_planner_ground.cpp)
-ament_target_dependencies(sensor_coverage_planner_ground rclcpp std_msgs nav_msgs geometry_msgs sensor_msgs tf2_ros tf2_geometry_msgs tf2)
+ament_target_dependencies(sensor_coverage_planner_ground rclcpp std_msgs nav_msgs geometry_msgs sensor_msgs tf2_ros tf2_geometry_msgs tf2 tare_planner_interfaces)
 target_link_libraries(sensor_coverage_planner_ground ${catkin_LIBRARIES} graph planning_env keypose_graph viewpoint_manager pointcloud_manager grid_world local_coverage_planner tare_visualizer)
 
 add_executable(navigationBoundary src/navigation_boundary_publisher/navigationBoundary.cpp)

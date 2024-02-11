@@ -13,7 +13,6 @@
 #include <tf2/LinearMath/Matrix3x3.h>
 #include <tf2/LinearMath/Quaternion.h>
 #include "sensor_coverage_planner/sensor_coverage_planner_ground.h"
-#include "graph/graph.h"
 
 using namespace std::chrono_literals;
 
@@ -34,11 +33,13 @@ void SensorCoveragePlanner3D::ReadParameters()
   this->declare_parameter<std::string>("sub_coverage_boundary_topic_", "/coverage_boundary");
   this->declare_parameter<std::string>("sub_viewpoint_boundary_topic_", "/navigation_boundary");
   this->declare_parameter<std::string>("sub_nogo_boundary_topic_", "/nogo_boundary");
+  this->declare_parameter<std::string>("sub_keypose_graph_topic_", "keypose_graph");
   this->declare_parameter<std::string>("pub_exploration_finish_topic_", "exploration_finish");
   this->declare_parameter<std::string>("pub_runtime_breakdown_topic_", "runtime_breakdown");
   this->declare_parameter<std::string>("pub_runtime_topic_", "/runtime");
   this->declare_parameter<std::string>("pub_waypoint_topic_", "/way_point");
   this->declare_parameter<std::string>("pub_momentum_activation_count_topic_", "momentum_activation_count");
+  this->declare_parameter<std::string>("pub_keypose_graph_topic_", "keypose_graph");
 
   // Bool
   this->declare_parameter<bool>("kAutoStart", false);
@@ -168,11 +169,13 @@ void SensorCoveragePlanner3D::ReadParameters()
   this->get_parameter("sub_coverage_boundary_topic_", sub_coverage_boundary_topic_);
   this->get_parameter("sub_viewpoint_boundary_topic_", sub_viewpoint_boundary_topic_);
   this->get_parameter("sub_nogo_boundary_topic_", sub_nogo_boundary_topic_);
+  this->get_parameter("sub_keypose_graph_topic_", sub_keypose_graph_topic_);
   this->get_parameter("pub_exploration_finish_topic_", pub_exploration_finish_topic_);
   this->get_parameter("pub_runtime_breakdown_topic_", pub_runtime_breakdown_topic_);
   this->get_parameter("pub_runtime_topic_", pub_runtime_topic_);
   this->get_parameter("pub_waypoint_topic_", pub_waypoint_topic_);
   this->get_parameter("pub_momentum_activation_count_topic_", pub_momentum_activation_count_topic_);
+  this->get_parameter("pub_keypose_graph_topic_", pub_keypose_graph_topic_);
 
   this->get_parameter("kAutoStart", kAutoStart);
 
@@ -243,6 +246,7 @@ void SensorCoveragePlanner3D::InitializeData()
 
   viewpoint_manager_ = std::make_shared<viewpoint_manager_ns::ViewPointManager>(shared_from_this());
   keypose_graph_ = std::make_shared<keypose_graph_ns::KeyposeGraph>(shared_from_this());
+  published_keypose_graph_ = std::make_shared<keypose_graph_ns::KeyposeGraph>(shared_from_this());
   planning_env_ = std::make_shared<planning_env_ns::PlanningEnv>(shared_from_this());
   grid_world_ = std::make_shared<grid_world_ns::GridWorld>(shared_from_this());
   grid_world_->SetUseKeyposeGraph(true);
@@ -287,6 +291,7 @@ void SensorCoveragePlanner3D::InitializeData()
   Eigen::Vector3d viewpoint_resolution = viewpoint_manager_->GetResolution();
   double add_non_keypose_node_min_dist = std::min(viewpoint_resolution.x(), viewpoint_resolution.y()) / 2;
   keypose_graph_->SetAddNonKeyposeNodeMinDist() = add_non_keypose_node_min_dist;
+  published_keypose_graph_->SetAddNonKeyposeNodeMinDist() = add_non_keypose_node_min_dist;
 
   robot_position_.x = 0;
   robot_position_.y = 0;
@@ -311,6 +316,7 @@ SensorCoveragePlanner3D::SensorCoveragePlanner3D()
   , step_(false)
   , use_momentum_(false)
   , lookahead_point_in_line_of_sight_(true)
+  , keypose_graph_updated_(false)
   , registered_cloud_count_(0)
   , keypose_count_(0)
   , direction_change_count_(0)
@@ -333,6 +339,7 @@ bool SensorCoveragePlanner3D::initialize()
   InitializeData();
 
   keypose_graph_->SetAllowVerticalEdge(false);
+  published_keypose_graph_ ->SetAllowVerticalEdge(false);
 
   lidar_model_ns::LiDARModel::setCloudDWZResol(planning_env_->GetPlannerCloudResolution());
 
@@ -362,6 +369,8 @@ bool SensorCoveragePlanner3D::initialize()
   nogo_boundary_sub_ = this->create_subscription<geometry_msgs::msg::PolygonStamped>(
       sub_nogo_boundary_topic_, 5,
       std::bind(&SensorCoveragePlanner3D::NogoBoundaryCallback, this, std::placeholders::_1));
+  keypose_graph_sub_ = this->create_subscription<tare_planner_interfaces::msg::KeyposeGraph>(
+      sub_keypose_graph_topic_, 5, std::bind(&SensorCoveragePlanner3D::KeyposeGraphCallback, this, std::placeholders::_1));
 
   global_path_full_publisher_ = this->create_publisher<nav_msgs::msg::Path>("global_path_full", 1);
   global_path_publisher_ = this->create_publisher<nav_msgs::msg::Path>("global_path", 1);
@@ -376,6 +385,7 @@ bool SensorCoveragePlanner3D::initialize()
   runtime_pub_ = this->create_publisher<std_msgs::msg::Float32>(pub_runtime_topic_, 2);
   momentum_activation_count_pub_ =
       this->create_publisher<std_msgs::msg::Int32>(pub_momentum_activation_count_topic_, 2);
+  keypose_graph_pub_ = this->create_publisher<tare_planner_interfaces::msg::KeyposeGraph>(pub_keypose_graph_topic_, 2);
   // Debug
   pointcloud_manager_neighbor_cells_origin_pub_ =
       this->create_publisher<geometry_msgs::msg::PointStamped>("pointcloud_manager_neighbor_cells_origin", 1);
@@ -565,6 +575,15 @@ void SensorCoveragePlanner3D::NogoBoundaryCallback(const geometry_msgs::msg::Pol
   nogo_boundary_marker_->Publish();
 }
 
+void SensorCoveragePlanner3D::KeyposeGraphCallback(
+    const tare_planner_interfaces::msg::KeyposeGraph::ConstSharedPtr keypose_graph_msg)
+{
+  published_keypose_graph_->FromMsg(*keypose_graph_msg);
+  published_keypose_graph_->CheckLocalCollision(robot_position_, viewpoint_manager_);
+  published_keypose_graph_->CheckConnectivity(robot_position_);
+  keypose_graph_updated_ = true;
+}
+
 void SensorCoveragePlanner3D::SendInitialWaypoint()
 {
   // send waypoint ahead
@@ -593,6 +612,7 @@ void SensorCoveragePlanner3D::UpdateKeyposeGraph()
   keypose_graph_vis_cloud_->cloud_->clear();
   keypose_graph_->CheckLocalCollision(robot_position_, viewpoint_manager_);
   keypose_graph_->CheckConnectivity(robot_position_);
+
   keypose_graph_->GetVisualizationCloud(keypose_graph_vis_cloud_->cloud_);
   keypose_graph_vis_cloud_->Publish();
 
@@ -750,12 +770,12 @@ void SensorCoveragePlanner3D::GlobalPlanning(std::vector<int>& global_cell_tsp_o
   global_tsp_timer.Start();
 
   grid_world_->UpdateCellStatus(viewpoint_manager_);
-  grid_world_->UpdateCellKeyposeGraphNodes(keypose_graph_);
-  grid_world_->AddPathsInBetweenCells(viewpoint_manager_, keypose_graph_);
+  grid_world_->UpdateCellKeyposeGraphNodes(published_keypose_graph_);
+  grid_world_->AddPathsInBetweenCells(viewpoint_manager_, published_keypose_graph_);
 
   viewpoint_manager_->UpdateCandidateViewPointCellStatus(grid_world_);
 
-  global_path = grid_world_->SolveGlobalTSP(viewpoint_manager_, global_cell_tsp_order, keypose_graph_);
+  global_path = grid_world_->SolveGlobalTSP(viewpoint_manager_, global_cell_tsp_order, published_keypose_graph_);
 
   global_tsp_timer.Stop(false);
   global_planning_runtime_ = global_tsp_timer.GetDuration("ms");
@@ -1435,6 +1455,14 @@ void SensorCoveragePlanner3D::execute()
 
     UpdateKeyposeGraph();
 
+    keypose_graph_pub_->publish(keypose_graph_->ToMsg());
+
+    update_representation_timer.Stop(false);
+    update_representation_runtime_ += update_representation_timer.GetDuration("ms");
+  }
+
+  if (keypose_graph_updated_)
+  {
     int uncovered_point_num = 0;
     int uncovered_frontier_point_num = 0;
     if (!exploration_finished_ || !kNoExplorationReturnHome)
@@ -1446,9 +1474,6 @@ void SensorCoveragePlanner3D::execute()
     {
       viewpoint_manager_->ResetViewPointCoverage();
     }
-
-    update_representation_timer.Stop(false);
-    update_representation_runtime_ += update_representation_timer.GetDuration("ms");
 
     // Global TSP
     std::vector<int> global_cell_tsp_order;
@@ -1499,6 +1524,9 @@ void SensorCoveragePlanner3D::execute()
     PublishLocalPlanningVisualization(local_path);
     PublishGlobalPlanningVisualization(global_path, local_path);
     PublishRuntime();
+
+    keypose_graph_updated_ = false;
   }
+
 }
 }  // namespace sensor_coverage_planner_3d_ns

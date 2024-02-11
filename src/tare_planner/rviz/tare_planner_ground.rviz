@@ -61,7 +61,7 @@ Visualization Manager:
             Filter size: 10
             History Policy: Keep Last
             Reliability Policy: Reliable
-            Value: /keypose_graph_cloud
+            Value: keypose_graph_cloud
           Use Fixed Frame: true
           Use rainbow: true
           Value: false
@@ -76,7 +76,7 @@ Visualization Manager:
             Filter size: 10
             History Policy: Keep Last
             Reliability Policy: Reliable
-            Value: /keypose_graph_edge_marker
+            Value: keypose_graph_edge_marker
           Value: false
         - Class: rviz_default_plugins/Marker
           Enabled: true
@@ -89,7 +89,7 @@ Visualization Manager:
             Filter size: 10
             History Policy: Keep Last
             Reliability Policy: Reliable
-            Value: /tare_visualizer/exploring_subspaces
+            Value: tare_visualizer/exploring_subspaces
           Value: true
         - Alpha: 1
           Buffer Length: 1
@@ -117,7 +117,7 @@ Visualization Manager:
             Filter size: 10
             History Policy: Keep Last
             Reliability Policy: Reliable
-            Value: /global_path
+            Value: global_path
           Value: true
         - Alpha: 1
           Autocompute Intensity Bounds: false
@@ -149,7 +149,7 @@ Visualization Manager:
             Filter size: 10
             History Policy: Keep Last
             Reliability Policy: Reliable
-            Value: /planner_cloud
+            Value: planner_cloud
           Use Fixed Frame: true
           Use rainbow: true
           Value: false
@@ -183,7 +183,7 @@ Visualization Manager:
             Filter size: 10
             History Policy: Keep Last
             Reliability Policy: Reliable
-            Value: /overall_map
+            Value: overall_map
           Use Fixed Frame: true
           Use rainbow: true
           Value: true
@@ -217,7 +217,7 @@ Visualization Manager:
             Filter size: 10
             History Policy: Keep Last
             Reliability Policy: Reliable
-            Value: /explored_areas
+            Value: explored_areas
           Use Fixed Frame: true
           Use rainbow: true
           Value: true
@@ -232,7 +232,7 @@ Visualization Manager:
             Filter size: 10
             History Policy: Keep Last
             Reliability Policy: Reliable
-            Value: /navigation_boundary
+            Value: navigation_boundary
           Value: false
       Enabled: true
       Name: Global
@@ -249,7 +249,7 @@ Visualization Manager:
             Filter size: 10
             History Policy: Keep Last
             Reliability Policy: Reliable
-            Value: /tare_visualizer/local_planning_horizon
+            Value: tare_visualizer/local_planning_horizon
           Value: true
         - Alpha: 0.5
           Autocompute Intensity Bounds: false
@@ -281,7 +281,7 @@ Visualization Manager:
             Filter size: 10
             History Policy: Keep Last
             Reliability Policy: Reliable
-            Value: /viewpoint_vis_cloud
+            Value: viewpoint_vis_cloud
           Use Fixed Frame: true
           Use rainbow: true
           Value: false
@@ -315,7 +315,7 @@ Visualization Manager:
             Filter size: 10
             History Policy: Keep Last
             Reliability Policy: Reliable
-            Value: /selected_viewpoint_vis_cloud
+            Value: selected_viewpoint_vis_cloud
           Use Fixed Frame: true
           Use rainbow: true
           Value: true
@@ -349,7 +349,7 @@ Visualization Manager:
             Filter size: 10
             History Policy: Keep Last
             Reliability Policy: Reliable
-            Value: /lookahead_point_cloud
+            Value: lookahead_point_cloud
           Use Fixed Frame: true
           Use rainbow: true
           Value: false
@@ -379,7 +379,7 @@ Visualization Manager:
             Filter size: 10
             History Policy: Keep Last
             Reliability Policy: Reliable
-            Value: /local_path
+            Value: local_path
           Value: true
         - Alpha: 1
           Autocompute Intensity Bounds: true
@@ -411,7 +411,7 @@ Visualization Manager:
             Filter size: 10
             History Policy: Keep Last
             Reliability Policy: Reliable
-            Value: /uncovered_cloud
+            Value: uncovered_cloud
           Use Fixed Frame: true
           Use rainbow: true
           Value: true
@@ -445,7 +445,7 @@ Visualization Manager:
             Filter size: 10
             History Policy: Keep Last
             Reliability Policy: Reliable
-            Value: /uncovered_frontier_cloud
+            Value: uncovered_frontier_cloud
           Use Fixed Frame: true
           Use rainbow: true
           Value: true
@@ -462,14 +462,14 @@ Visualization Manager:
             Filter size: 10
             History Policy: Keep Last
             Reliability Policy: Reliable
-            Value: /way_point
+            Value: way_point
           Value: true
         - Class: rviz_default_plugins/Axes
           Enabled: true
           Length: 4
           Name: Vehicle
           Radius: 0.4000000059604645
-          Reference Frame: sensor
+          Reference Frame: robot_1
           Value: true
         - Alpha: 1
           Autocompute Intensity Bounds: true
@@ -501,7 +501,7 @@ Visualization Manager:
             Filter size: 10
             History Policy: Keep Last
             Reliability Policy: Reliable
-            Value: /free_paths
+            Value: free_paths
           Use Fixed Frame: true
           Use rainbow: true
           Value: false
@@ -531,7 +531,7 @@ Visualization Manager:
             Filter size: 10
             History Policy: Keep Last
             Reliability Policy: Reliable
-            Value: /path
+            Value: path
           Value: false
       Enabled: true
       Name: Local
@@ -558,14 +558,14 @@ Visualization Manager:
         Durability Policy: Volatile
         History Policy: Keep Last
         Reliability Policy: Reliable
-        Value: /initialpose
+        Value: initialpose
     - Class: rviz_default_plugins/SetGoal
       Topic:
         Depth: 5
         Durability Policy: Volatile
         History Policy: Keep Last
         Reliability Policy: Reliable
-        Value: /move_base_simple/goal
+        Value: move_base_simple/goal
     - Class: rviz_default_plugins/PublishPoint
       Single click: true
       Topic:
@@ -573,7 +573,7 @@ Visualization Manager:
         Durability Policy: Volatile
         History Policy: Keep Last
         Reliability Policy: Reliable
-        Value: /clicked_point
+        Value: clicked_point
   Transformation:
     Current:
       Class: rviz_default_plugins/TF

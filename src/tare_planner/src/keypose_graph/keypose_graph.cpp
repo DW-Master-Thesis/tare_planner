@@ -25,6 +25,27 @@ KeyposeNode::KeyposeNode(const geometry_msgs::msg::Point& point, int node_ind, i
 {
 }
 
+KeyposeNode::KeyposeNode(const tare_planner_interfaces::msg::KeyposeNode& msg)
+  : KeyposeNode(msg.position, msg.node_ind, msg.keypose_id, msg.is_keypose)
+{
+  offset_to_keypose_ = msg.offset_to_keypose;
+  cell_ind_ = msg.cell_ind;
+  is_connected_ = msg.is_connected;
+}
+
+tare_planner_interfaces::msg::KeyposeNode KeyposeNode::ToMsg() const
+{
+  tare_planner_interfaces::msg::KeyposeNode msg;
+  msg.position = position_;
+  msg.offset_to_keypose = offset_to_keypose_;
+  msg.keypose_id = keypose_id_;
+  msg.node_ind = node_ind_;
+  msg.cell_ind = cell_ind_;
+  msg.is_keypose = is_keypose_;
+  msg.is_connected = is_connected_;
+  return msg;
+}
+
 KeyposeGraph::KeyposeGraph(rclcpp::Node::SharedPtr nh)
   : allow_vertical_edge_(false)
   , current_keypose_id_(0)
@@ -41,6 +62,98 @@ KeyposeGraph::KeyposeGraph(rclcpp::Node::SharedPtr nh)
   connected_nodes_cloud_ = pcl::PointCloud<pcl::PointXYZI>::Ptr(new pcl::PointCloud<pcl::PointXYZI>);
   kdtree_nodes_ = pcl::KdTreeFLANN<pcl::PointXYZI>::Ptr(new pcl::KdTreeFLANN<pcl::PointXYZI>());
   nodes_cloud_ = pcl::PointCloud<pcl::PointXYZI>::Ptr(new pcl::PointCloud<pcl::PointXYZI>);
+}
+
+void KeyposeGraph::FromMsg(const tare_planner_interfaces::msg::KeyposeGraph& msg)
+{
+  graph_.clear();
+  dist_.clear();
+  nodes_.clear();
+  connected_node_indices_.clear();
+
+  allow_vertical_edge_ = msg.allow_vertical_edge;
+  current_keypose_id_ = msg.current_keypose_id;
+  current_keypose_position_ = msg.current_keypose_position;
+
+  for (const auto& node_ind : msg.connected_node_indices)
+  {
+    connected_node_indices_.push_back(node_ind);
+  }
+
+  for (const auto& node_msg : msg.nodes)
+  {
+    KeyposeNode node(node_msg);
+    nodes_.push_back(node);
+  }
+
+  int num_rows_in_graph = msg.graph_array_offsets.size();
+  int offset = 0;
+  for (int i = 0; i < num_rows_in_graph; i++)
+  {
+    std::vector<int> row;
+    for (int j = 0; j < msg.graph_array_offsets[i]; j++)
+    {
+      row.push_back(msg.graph[offset + j]);
+    }
+    graph_.push_back(row);
+    offset += msg.graph_array_offsets[i];
+  }
+
+  int num_rows_in_dist = msg.dist_array_offsets.size();
+  offset = 0;
+  for (int i = 0; i < num_rows_in_dist; i++)
+  {
+    std::vector<double> row;
+    for (int j = 0; j < msg.dist_array_offsets[i]; j++)
+    {
+      row.push_back(msg.dist[offset + j]);
+    }
+    dist_.push_back(row);
+    offset += msg.dist_array_offsets[i];
+  }
+
+  UpdateNodes();
+}
+
+tare_planner_interfaces::msg::KeyposeGraph KeyposeGraph::ToMsg() const
+{
+  tare_planner_interfaces::msg::KeyposeGraph msg;
+  msg.allow_vertical_edge = allow_vertical_edge_;
+  msg.current_keypose_id = current_keypose_id_;
+  msg.current_keypose_position = current_keypose_position_;
+
+  for (const auto& node_idx : connected_node_indices_)
+  {
+    msg.connected_node_indices.push_back(node_idx);
+  }
+
+  for (const auto& node : nodes_)
+  {
+    msg.nodes.push_back(node.ToMsg());
+  }
+
+  for (int i = 0; i < graph_.size(); i++)
+  {
+    const auto& row = graph_[i];
+    int row_size = row.size();
+    for (const auto& element : row)
+    {
+      msg.graph.push_back(element);
+    }
+    msg.graph_array_offsets.push_back(row_size);
+  }
+
+  for (int i = 0; i < dist_.size(); i++)
+  {
+    const auto& row = dist_[i];
+    int row_size = row.size();
+    for (const auto& element : row)
+    {
+      msg.dist.push_back(element);
+    }
+    msg.dist_array_offsets.push_back(row_size);
+  }
+  return msg;
 }
 
 void KeyposeGraph::ReadParameters(rclcpp::Node::SharedPtr nh)
