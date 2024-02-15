@@ -295,6 +295,8 @@ private:
   int direction_change_count_;
   int direction_no_change_count_;
   int momentum_activation_count_;
+  int uncovered_point_num_;
+  int uncovered_frontier_point_num_;
 
   double start_time_;
   double global_direction_switch_time_;

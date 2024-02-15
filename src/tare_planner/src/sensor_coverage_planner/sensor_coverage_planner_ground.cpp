@@ -1457,24 +1457,24 @@ void SensorCoveragePlanner3D::execute()
 
     keypose_graph_pub_->publish(keypose_graph_->ToMsg());
 
-    update_representation_timer.Stop(false);
-    update_representation_runtime_ += update_representation_timer.GetDuration("ms");
-  }
-
-  if (keypose_graph_updated_)
-  {
-    int uncovered_point_num = 0;
-    int uncovered_frontier_point_num = 0;
+    uncovered_point_num_ = 0;
+    uncovered_frontier_point_num_ = 0;
     if (!exploration_finished_ || !kNoExplorationReturnHome)
     {
       UpdateViewPointCoverage();
-      UpdateCoveredAreas(uncovered_point_num, uncovered_frontier_point_num);
+      UpdateCoveredAreas(uncovered_point_num_, uncovered_frontier_point_num_);
     }
     else
     {
       viewpoint_manager_->ResetViewPointCoverage();
     }
 
+    update_representation_timer.Stop(false);
+    update_representation_runtime_ += update_representation_timer.GetDuration("ms");
+  }
+
+  if (keypose_graph_updated_)
+  {
     // Global TSP
     std::vector<int> global_cell_tsp_order;
     exploration_path_ns::ExplorationPath global_path;
@@ -1482,7 +1482,7 @@ void SensorCoveragePlanner3D::execute()
 
     // Local TSP
     exploration_path_ns::ExplorationPath local_path;
-    LocalPlanning(uncovered_point_num, uncovered_frontier_point_num, global_path, local_path);
+    LocalPlanning(uncovered_point_num_, uncovered_frontier_point_num_, global_path, local_path);
 
     near_home_ = GetRobotToHomeDistance() < kRushHomeDist;
     at_home_ = GetRobotToHomeDistance() < kAtHomeDistThreshold;
