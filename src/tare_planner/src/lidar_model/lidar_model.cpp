@@ -19,6 +19,38 @@ const double LiDARModel::kEpsilon = 1e-4;
 const double LiDARModel::kCloudInflateRatio = 2;
 double LiDARModel::pointcloud_resolution_ = 0.2;
 
+tare_planner_interfaces::msg::LidarModel LiDARModel::ToMsg() const
+{
+  tare_planner_interfaces::msg::LidarModel msg;
+  msg.pose = pose_;
+  for (int i = 0; i < covered_voxel_.size(); i++)
+  {
+    msg.covered_voxel.push_back(covered_voxel_[i]);
+  }
+  for (int i = 0; i < reset_.size(); i++)
+  {
+    msg.reset.push_back(reset_[i]);
+  }
+  return msg;
+}
+
+void LiDARModel::FromMsg(const tare_planner_interfaces::msg::LidarModel& msg)
+{
+  pose_ = msg.pose;
+  if (msg.covered_voxel.size() != covered_voxel_.size() || msg.reset.size() != reset_.size())
+  {
+    RCLCPP_ERROR(rclcpp::get_logger("standalone_logger"), "Size of covered voxel or reset does not match");
+  }
+  for (int i = 0; i < msg.covered_voxel.size(); i++)
+  {
+    covered_voxel_[i] = msg.covered_voxel[i];
+  }
+  for (int i = 0; i < msg.reset.size(); i++)
+  {
+    reset_[i] = msg.reset[i];
+  }
+}
+
 int LiDARModel::sub2ind(int row_index, int column_index) const
 {
   return row_index * kHorizontalVoxelSize + column_index;

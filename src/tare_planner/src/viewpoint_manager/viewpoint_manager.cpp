@@ -109,6 +109,188 @@ ViewPointManager::ViewPointManager(rclcpp::Node::SharedPtr nh) : initialized_(fa
   }
 }
 
+tare_planner_interfaces::msg::ViewpointManager ViewPointManager::ToMsg() {
+  tare_planner_interfaces::msg::ViewpointManager msg;
+  msg.initialized = initialized_;
+  msg.grid = grid_->ToMsg();
+  for (int i = 0; i < viewpoints_.size(); i++)
+  {
+    msg.viewpoints.push_back(viewpoints_[i].ToMsg());
+  }
+
+  for (int i = 0; i < connected_neighbor_indices_.size(); i++)
+  {
+    const auto& row = connected_neighbor_indices_[i];
+    int row_size = row.size();
+    for (const auto& element : row)
+    {
+      msg.connected_neighbor_indices.push_back(element);
+    }
+    msg.connected_neighbor_indices_offsets.push_back(row_size);
+  }
+
+  for (int i = 0; i < connected_neighbor_dist_.size(); i++)
+  {
+    const auto& row = connected_neighbor_dist_[i];
+    int row_size = row.size();
+    for (const auto& element : row)
+    {
+      msg.connected_neighbor_dist.push_back(element);
+    }
+    msg.connected_neighbor_dist_offsets.push_back(row_size);
+  }
+
+  for (int i = 0; i < in_range_neighbor_indices_.size(); i++)
+  {
+    const auto& row = in_range_neighbor_indices_[i];
+    int row_size = row.size();
+    for (const auto& element : row)
+    {
+      msg.in_range_neighbor_indices.push_back(element);
+    }
+    msg.in_range_neighbor_indices_offsets.push_back(row_size);
+  }
+
+  msg.graph_index_map = graph_index_map_;
+
+  msg.robot_position.x = robot_position_.x();
+  msg.robot_position.y = robot_position_.y();
+  msg.robot_position.z = robot_position_.z();
+  msg.origin.x = origin_.x();
+  msg.origin.y = origin_.y();
+  msg.origin.z = origin_.z();
+  msg.local_planning_horizon_size.x = local_planning_horizon_size_.x();
+  msg.local_planning_horizon_size.y = local_planning_horizon_size_.y();
+  msg.local_planning_horizon_size.z = local_planning_horizon_size_.z();
+
+
+  for (int i = 0; i < candidate_viewpoint_graph_.size(); i++)
+  {
+    const auto& row = candidate_viewpoint_graph_[i];
+    int row_size = row.size();
+    for (const auto& element : row)
+    {
+      msg.candidate_viewpoint_graph.push_back(element);
+    }
+    msg.candidate_viewpoint_graph_offsets.push_back(row_size);
+  }
+
+  for (int i = 0; i < candidate_viewpoint_dist_.size(); i++)
+  {
+    const auto& row = candidate_viewpoint_dist_[i];
+    int row_size = row.size();
+    for (const auto& element : row)
+    {
+      msg.candidate_viewpoint_dist.push_back(element);
+    }
+    msg.candidate_viewpoint_dist_offsets.push_back(row_size);
+  }
+
+  msg.candidate_viewpoint_positions = candidate_viewpoint_position_;
+
+  msg.candidate_indices = candidate_indices_;
+  
+  return msg;
+}
+
+void ViewPointManager::FromMsg(const tare_planner_interfaces::msg::ViewpointManager& msg) {
+  initialized_ = msg.initialized;
+  grid_->FromMsg(msg.grid);
+  viewpoints_ = std::vector<viewpoint_ns::ViewPoint>(msg.viewpoints.size());
+  for (int i = 0; i < msg.viewpoints.size(); i++)
+  {
+    viewpoints_[i].FromMsg(msg.viewpoints[i]);
+  }
+  
+  connected_neighbor_indices_.clear();
+  connected_neighbor_dist_.clear();
+  in_range_neighbor_indices_.clear();
+
+  int num_rows = msg.connected_neighbor_indices_offsets.size();
+  int offset = 0;
+  for (int i = 0; i < num_rows; i++)
+  {
+    int row_size = msg.connected_neighbor_indices_offsets[i];
+    std::vector<int> row;
+    for (int j = 0; j < row_size; j++)
+    {
+      row.push_back(msg.connected_neighbor_indices[offset + j]);
+    }
+    connected_neighbor_indices_.push_back(row);
+    offset += row_size;
+  }
+
+  num_rows = msg.connected_neighbor_dist_offsets.size();
+  offset = 0;
+  for (int i = 0; i < num_rows; i++)
+  {
+    int row_size = msg.connected_neighbor_dist_offsets[i];
+    std::vector<double> row;
+    for (int j = 0; j < row_size; j++)
+    {
+      row.push_back(msg.connected_neighbor_dist[offset + j]);
+    }
+    connected_neighbor_dist_.push_back(row);
+    offset += row_size;
+  }
+
+  num_rows = msg.in_range_neighbor_indices_offsets.size();
+  offset = 0;
+  for (int i = 0; i < num_rows; i++)
+  {
+    int row_size = msg.in_range_neighbor_indices_offsets[i];
+    std::vector<int> row;
+    for (int j = 0; j < row_size; j++)
+    {
+      row.push_back(msg.in_range_neighbor_indices[offset + j]);
+    }
+    in_range_neighbor_indices_.push_back(row);
+    offset += row_size;
+  }
+
+  updated_viewpoint_indices_ = msg.updated_viewpoint_indices;
+  graph_index_map_ = msg.graph_index_map;
+  robot_position_ = Eigen::Vector3d(msg.robot_position.x, msg.robot_position.y, msg.robot_position.z);
+  origin_ = Eigen::Vector3d(msg.origin.x, msg.origin.y, msg.origin.z);
+  local_planning_horizon_size_ = Eigen::Vector3d(msg.local_planning_horizon_size.x, msg.local_planning_horizon_size.y,
+                                                msg.local_planning_horizon_size.z);
+
+  candidate_viewpoint_graph_.clear();
+  candidate_viewpoint_dist_.clear();
+
+  num_rows = msg.candidate_viewpoint_graph_offsets.size();
+  offset = 0;
+  for (int i = 0; i < num_rows; i++)
+  {
+    int row_size = msg.candidate_viewpoint_graph_offsets[i];
+    std::vector<int> row;
+    for (int j = 0; j < row_size; j++)
+    {
+      row.push_back(msg.candidate_viewpoint_graph[offset + j]);
+    }
+    candidate_viewpoint_graph_.push_back(row);
+    offset += row_size;
+  }
+
+  num_rows = msg.candidate_viewpoint_dist_offsets.size();
+  offset = 0;
+  for (int i = 0; i < num_rows; i++)
+  {
+    int row_size = msg.candidate_viewpoint_dist_offsets[i];
+    std::vector<double> row;
+    for (int j = 0; j < row_size; j++)
+    {
+      row.push_back(msg.candidate_viewpoint_dist[offset + j]);
+    }
+    candidate_viewpoint_dist_.push_back(row);
+    offset += row_size;
+  }
+
+  candidate_viewpoint_position_ = msg.candidate_viewpoint_positions;
+  candidate_indices_.clear();
+  candidate_indices_ = msg.candidate_indices;
+}
+
 void ViewPointManager::ComputeConnectedNeighborIndices()
 {
   connected_neighbor_indices_.resize(vp_.kViewPointNumber);

@@ -1,0 +1,4 @@
+KeyposeGraph keypose_graph
+ViewpointManager viewpoint_manager
+int32 uncovered_point_num
+int32 uncovered_frontier_point_num

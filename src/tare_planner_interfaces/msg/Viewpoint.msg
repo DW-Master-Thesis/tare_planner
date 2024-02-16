@@ -1,0 +1,16 @@
+LidarModel lidar_model
+bool in_collision
+bool in_line_of_sight
+bool connected
+bool visited
+bool selected
+bool is_candidate
+bool has_terrain_height
+bool in_exploring_cell
+int32 cell_ind
+int32 collision_frame_count
+float64 terrain_height
+bool has_terrain_neighbor
+bool in_current_frame_line_of_sight
+int32[] covered_point_list
+int32[] covered_frontier_point_list

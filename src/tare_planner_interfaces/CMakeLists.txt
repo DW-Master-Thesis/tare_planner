@@ -11,8 +11,16 @@ find_package(geometry_msgs REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
 
 rosidl_generate_interfaces(${PROJECT_NAME}
+  "msg/Vector3d.msg"
+  "msg/Vector3i.msg"
   "msg/KeyposeNode.msg"
   "msg/KeyposeGraph.msg"
+  "msg/LidarModel.msg"
+  "msg/Viewpoint.msg"
+  "msg/GridInt32.msg"
+  "msg/RollingGrid.msg"
+  "msg/ViewpointManager.msg"
+  "msg/PlanningInterface.msg"
   DEPENDENCIES geometry_msgs
 )
 

@@ -19,6 +19,9 @@
 #include <grid/grid.h>
 #include <utils/misc_utils.h>
 
+#include <tare_planner_interfaces/msg/grid_int32.hpp>
+#include <tare_planner_interfaces/msg/rolling_grid.hpp>
+
 namespace rolling_grid_ns
 {
 class RollingGrid
@@ -26,6 +29,10 @@ class RollingGrid
 public:
   explicit RollingGrid(const Eigen::Vector3i& size);
   ~RollingGrid() = default;
+
+  tare_planner_interfaces::msg::RollingGrid ToMsg() const;
+  void FromMsg(const tare_planner_interfaces::msg::RollingGrid& msg);
+
   bool InRange(Eigen::Vector3i sub) const
   {
     return grid0_->InRange(sub);
@@ -86,6 +93,9 @@ private:
   std::vector<int> updated_indices_;
   std::vector<int> array_ind_to_ind_;
   bool which_grid_;
+
+  tare_planner_interfaces::msg::GridInt32 GridInt32ToMsg(const std::shared_ptr<grid_ns::Grid<int>>& grid) const;
+  std::shared_ptr<grid_ns::Grid<int>> GridInt32FromMsg(const tare_planner_interfaces::msg::GridInt32& msg) const;
 
   inline int GetFromIdx(int cur_idx, int roll_step, int max_idx) const
   {

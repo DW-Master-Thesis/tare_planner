@@ -55,7 +55,7 @@ endforeach()
 # )
 
 add_library(lidar_model src/lidar_model/lidar_model.cpp)
-ament_target_dependencies(lidar_model rclcpp std_msgs nav_msgs geometry_msgs sensor_msgs tf2_ros tf2_geometry_msgs tf2 visualization_msgs pcl_ros pcl_conversions)
+ament_target_dependencies(lidar_model rclcpp std_msgs nav_msgs geometry_msgs sensor_msgs tf2_ros tf2_geometry_msgs tf2 visualization_msgs pcl_ros pcl_conversions tare_planner_interfaces)
 # target_link_libraries(lidar_model ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 
 add_library(graph src/graph/graph.cpp)
@@ -75,11 +75,11 @@ ament_target_dependencies(tsp_solver rclcpp std_msgs nav_msgs geometry_msgs sens
 target_link_libraries(tsp_solver ${catkin_LIBRARIES} ${CMAKE_CURRENT_SOURCE_DIR}/or-tools/lib/libortools.so ${CMAKE_CURRENT_SOURCE_DIR}/or-tools/lib/libglog.so)
 
 add_library(viewpoint src/viewpoint/viewpoint.cpp)
-ament_target_dependencies(viewpoint rclcpp std_msgs nav_msgs geometry_msgs sensor_msgs tf2_ros tf2_geometry_msgs tf2)
+ament_target_dependencies(viewpoint rclcpp std_msgs nav_msgs geometry_msgs sensor_msgs tf2_ros tf2_geometry_msgs tf2 tare_planner_interfaces)
 target_link_libraries(viewpoint ${catkin_LIBRARIES} lidar_model)
 
 add_library(rolling_grid src/rolling_grid/rolling_grid.cpp)
-ament_target_dependencies(rolling_grid rclcpp std_msgs nav_msgs geometry_msgs sensor_msgs tf2_ros tf2_geometry_msgs tf2 pcl_ros pcl_conversions visualization_msgs)
+ament_target_dependencies(rolling_grid rclcpp std_msgs nav_msgs geometry_msgs sensor_msgs tf2_ros tf2_geometry_msgs tf2 pcl_ros pcl_conversions visualization_msgs tare_planner_interfaces)
 target_link_libraries(rolling_grid ${catkin_LIBRARIES} misc_utils pointcloud_utils)
 
 add_library(viewpoint_manager src/viewpoint_manager/viewpoint_manager.cpp)
@@ -103,7 +103,7 @@ ament_target_dependencies(keypose_graph rclcpp std_msgs nav_msgs geometry_msgs s
 target_link_libraries(keypose_graph ${catkin_LIBRARIES} ${PCL_LIBRARIES} viewpoint_manager)
 
 add_library(rolling_occupancy_grid src/rolling_occupancy_grid/rolling_occupancy_grid.cpp)
-ament_target_dependencies(rolling_occupancy_grid rclcpp std_msgs nav_msgs geometry_msgs sensor_msgs tf2_ros tf2_geometry_msgs tf2 pcl_ros pcl_conversions visualization_msgs)
+ament_target_dependencies(rolling_occupancy_grid rclcpp std_msgs nav_msgs geometry_msgs sensor_msgs tf2_ros tf2_geometry_msgs tf2 pcl_ros pcl_conversions visualization_msgs tare_planner_interfaces)
 target_link_libraries(rolling_occupancy_grid ${catkin_LIBRARIES})
 
 add_library(planning_env src/planning_env/planning_env.cpp)

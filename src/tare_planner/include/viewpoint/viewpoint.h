@@ -12,6 +12,7 @@
 
 #include <geometry_msgs/msg/point.hpp>
 #include <lidar_model/lidar_model.h>
+#include <tare_planner_interfaces/msg/viewpoint.hpp>
 
 namespace viewpoint_ns
 {
@@ -21,6 +22,9 @@ public:
   explicit ViewPoint(double x = 0.0, double y = 0.0, double z = 0.0);
   explicit ViewPoint(const geometry_msgs::msg::Point& position);
   ~ViewPoint() = default;
+
+  tare_planner_interfaces::msg::Viewpoint ToMsg() const;
+  void FromMsg(const tare_planner_interfaces::msg::Viewpoint& msg);
 
   template <class PCLPointType>
   void UpdateCoverage(const PCLPointType& point)

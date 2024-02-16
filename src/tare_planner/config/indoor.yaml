@@ -8,13 +8,13 @@
     sub_coverage_boundary_topic_ : sensor_coverage_planner/coverage_boundary
     sub_viewpoint_boundary_topic_ : navigation_boundary
     sub_nogo_boundary_topic_ : sensor_coverage_planner/nogo_boundary
-    sub_keypose_graph_topic_: keypose_graph
+    sub_planning_interface_topic_: planning_interface
     pub_exploration_finish_topic_ : exploration_finish
     pub_runtime_breakdown_topic_ : runtime_breakdown
     pub_runtime_topic_ : runtime
     pub_waypoint_topic_ : way_point
     pub_momentum_activation_count_topic_ : momentum_activation_count
-    pub_keypose_graph_topic_: keypose_graph
+    pub_planning_interface_topic: planning_interface
 
     kAutoStart : true
     kRushHome : true

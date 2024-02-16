@@ -34,6 +34,50 @@ ViewPoint::ViewPoint(const geometry_msgs::msg::Point& position) : ViewPoint(posi
 {
 }
 
+tare_planner_interfaces::msg::Viewpoint ViewPoint::ToMsg() const
+{
+  tare_planner_interfaces::msg::Viewpoint msg;
+  msg.lidar_model = lidar_model_.ToMsg();
+  msg.in_collision = in_collision_;
+  msg.in_line_of_sight = in_line_of_sight_;
+  msg.connected = connected_;
+  msg.visited = visited_;
+  msg.selected = selected_;
+  msg.is_candidate = is_candidate_;
+  msg.has_terrain_height = has_terrain_height_;
+  msg.in_exploring_cell = in_exploring_cell_;
+  msg.cell_ind = cell_ind_;
+  msg.collision_frame_count = collision_frame_count_;
+  msg.terrain_height = terrain_height_;
+  msg.has_terrain_neighbor = has_terrain_neighbor_;
+  msg.in_current_frame_line_of_sight = in_current_frame_line_of_sight_;
+  msg.covered_point_list = covered_point_list_;
+  msg.covered_frontier_point_list = covered_frontier_point_list_;
+  return msg;
+}
+
+void ViewPoint::FromMsg(const tare_planner_interfaces::msg::Viewpoint& msg)
+{
+  covered_point_list_.clear();
+  covered_frontier_point_list_.clear();
+  lidar_model_.FromMsg(msg.lidar_model);
+  in_collision_ = msg.in_collision;
+  in_line_of_sight_ = msg.in_line_of_sight;
+  connected_ = msg.connected;
+  visited_ = msg.visited;
+  selected_ = msg.selected;
+  is_candidate_ = msg.is_candidate;
+  has_terrain_height_ = msg.has_terrain_height;
+  in_exploring_cell_ = msg.in_exploring_cell;
+  cell_ind_ = msg.cell_ind;
+  collision_frame_count_ = msg.collision_frame_count;
+  terrain_height_ = msg.terrain_height;
+  has_terrain_neighbor_ = msg.has_terrain_neighbor;
+  in_current_frame_line_of_sight_ = msg.in_current_frame_line_of_sight;
+  covered_point_list_ = msg.covered_point_list;
+  covered_frontier_point_list_ = msg.covered_frontier_point_list;
+}
+
 void ViewPoint::Reset()
 {
   in_collision_ = false;

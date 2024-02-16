@@ -16,6 +16,7 @@
 // ROS
 #include <visualization_msgs/msg/marker.hpp>
 #include <geometry_msgs/msg/point.hpp>
+#include <tare_planner_interfaces/msg/lidar_model.hpp>
 // PCL
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
@@ -32,6 +33,9 @@ public:
                       double ry = 0.0, double rz = 0.0);
   explicit LiDARModel(const geometry_msgs::msg::Pose& pose);
   ~LiDARModel() = default;
+
+  tare_planner_interfaces::msg::LidarModel ToMsg() const;
+  void FromMsg(const tare_planner_interfaces::msg::LidarModel& msg);
 
   /**
    * @brief

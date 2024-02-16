@@ -34,6 +34,64 @@ RollingGrid::RollingGrid(const Eigen::Vector3i& size) : size_(size), which_grid_
   }
 }
 
+tare_planner_interfaces::msg::RollingGrid RollingGrid::ToMsg() const
+{
+  tare_planner_interfaces::msg::RollingGrid msg;
+  msg.size.x = size_.x();
+  msg.size.y = size_.y();
+  msg.size.z = size_.z();
+  msg.grid0 = GridInt32ToMsg(grid0_);
+  msg.grid1 = GridInt32ToMsg(grid1_);
+  msg.which_grid = which_grid_;
+  msg.updated_indices = updated_indices_;
+  msg.array_ind_to_ind = array_ind_to_ind_;
+  return msg;
+}
+
+void RollingGrid::FromMsg(const tare_planner_interfaces::msg::RollingGrid& msg)
+{
+  size_.x() = msg.size.x;
+  size_.y() = msg.size.y;
+  size_.z() = msg.size.z;
+  grid0_ = GridInt32FromMsg(msg.grid0);
+  grid1_ = GridInt32FromMsg(msg.grid1);
+  which_grid_ = msg.which_grid;
+  updated_indices_ = msg.updated_indices;
+  array_ind_to_ind_ = msg.array_ind_to_ind;
+}
+
+tare_planner_interfaces::msg::GridInt32 RollingGrid::GridInt32ToMsg(const std::shared_ptr<grid_ns::Grid<int>>& grid) const
+{
+  tare_planner_interfaces::msg::GridInt32 msg;
+  msg.origin.x = grid->GetOrigin().x();
+  msg.origin.y = grid->GetOrigin().y();
+  msg.origin.z = grid->GetOrigin().z();
+  msg.size.x = grid->GetSize().x();
+  msg.size.y = grid->GetSize().y();
+  msg.size.z = grid->GetSize().z();
+  msg.resolution.x = grid->GetResolution().x();
+  msg.resolution.y = grid->GetResolution().y();
+  msg.resolution.z = grid->GetResolution().z();
+  for (int i = 0; i < grid->GetCellNumber(); i++)
+  {
+    msg.cells.push_back(grid->GetCellValue(i));
+  }
+  return msg;
+}
+
+std::shared_ptr<grid_ns::Grid<int>> RollingGrid::GridInt32FromMsg(const tare_planner_interfaces::msg::GridInt32& msg) const
+{
+  Eigen::Vector3d origin(msg.origin.x, msg.origin.y, msg.origin.z);
+  Eigen::Vector3i size(msg.size.x, msg.size.y, msg.size.z);
+  Eigen::Vector3d resolution(msg.resolution.x, msg.resolution.y, msg.resolution.z);
+  std::shared_ptr<grid_ns::Grid<int>> grid = std::make_shared<grid_ns::Grid<int>>(size, 0, origin, resolution);
+  for (int i = 0; i < grid->GetCellNumber(); i++)
+  {
+    grid->SetCellValue(i, msg.cells[i]);
+  }
+  return grid;
+}
+
 void RollingGrid::Roll(const Eigen::Vector3i& roll_dir)
 {
   if (roll_dir.x() == 0 && roll_dir.y() == 0 && roll_dir.z() == 0)

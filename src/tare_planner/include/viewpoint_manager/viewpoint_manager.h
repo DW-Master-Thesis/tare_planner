@@ -34,6 +34,8 @@
 #include <grid_world/grid_world.h>
 #include <exploration_path/exploration_path.h>
 
+#include <tare_planner_interfaces/msg/viewpoint_manager.hpp>
+
 namespace viewpoint_manager_ns
 {
 struct ViewPointManagerParameter
@@ -95,6 +97,9 @@ public:
   std::vector<int> candidate_indices_;
   explicit ViewPointManager(rclcpp::Node::SharedPtr nh);
   ~ViewPointManager() = default;
+
+  tare_planner_interfaces::msg::ViewpointManager ToMsg();
+  void FromMsg(const tare_planner_interfaces::msg::ViewpointManager& msg);
 
   int GetViewPointArrayInd(int viewpoint_ind, bool use_array_ind = false) const;
   int GetViewPointInd(int viewpoint_array_ind) const;
