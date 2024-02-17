@@ -12,6 +12,8 @@
 #include <memory>
 #include <tf2/LinearMath/Matrix3x3.h>
 #include <tf2/LinearMath/Quaternion.h>
+#include <tare_planner_interfaces/msg/viewpoint_manager.hpp>
+#include <tare_planner_interfaces/msg/keypose_graph.hpp>
 #include "sensor_coverage_planner/sensor_coverage_planner_ground.h"
 
 using namespace std::chrono_literals;
@@ -1533,6 +1535,11 @@ void SensorCoveragePlanner3D::execute()
     PublishRuntime();
 
     planning_interface_update_ = false;
+
+    auto vpm_msg = published_viewpoint_manager_->ToMsg();
+    viewpoint_manager_->FromMsg(vpm_msg);
+    auto kg_msg = published_keypose_graph_->ToMsg();
+    keypose_graph_->FromMsg(kg_msg);
   }
 
 }
