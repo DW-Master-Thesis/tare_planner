@@ -9,15 +9,28 @@ from launch_ros.actions import Node
 
 def launch_tare_node(context, worldName, robotName):
     world_name_str = str(worldName.perform(context))
+    robot_name_str = str(robotName.perform(context))
+    namespace = "robot_" + robot_name_str
     tare_planner_node = Node(
         package='tare_planner',
         executable='tare_planner_node',
         name='tare_planner_node',
         output='screen',
-        parameters=[get_package_share_directory('tare_planner') + "/" + world_name_str + '.yaml'],
-        namespace=robotName,
+        parameters=[
+          get_package_share_directory('tare_planner') + "/" + world_name_str + '.yaml',
+        {"kRobotId": int(robot_name_str)},
+        ],
+        namespace=namespace,
     )
-    return [tare_planner_node]
+    rviz_node = Node(
+        package='rviz2',
+        executable='rviz2',
+        name='tare_planner_ground_rviz',
+        arguments=[
+            '-d', get_package_share_directory('tare_planner')+'/tare_planner_ground.rviz'],
+        namespace=namespace,
+    )
+    return [rviz_node, tare_planner_node]
 
 
 def generate_launch_description():
@@ -40,7 +53,7 @@ def generate_launch_description():
     )
     declare_robotName = DeclareLaunchArgument(
         'robotName',
-        default_value='robot_1',
+        default_value='0',
         description='',
     )
     declare_rviz = DeclareLaunchArgument(
@@ -54,37 +67,11 @@ def generate_launch_description():
         description='Use boundary for navigation',
     )
 
-    navigation_boundary_node = Node(
-        package='tare_planner',
-        executable='navigationBoundary',
-        name='navigationBoundary',
-        output='screen',
-        parameters=[
-            {'boundary_file_dir': get_package_share_directory('tare_planner') + '/data/boundary.ply'},
-            {'sendBoundary': True},
-            {'sendBoundaryInterval': 2}
-        ],
-        condition=IfCondition(useBoundary),
-        namespace=robotName,
-    )
-
-    rviz_node = Node(
-        package='rviz2',
-        executable='rviz2',
-        name='tare_planner_ground_rviz',
-        arguments=[
-            '-d', get_package_share_directory('tare_planner')+'/tare_planner_ground.rviz'],
-        condition=IfCondition(rviz),
-        namespace=robotName,
-    )
-
     return LaunchDescription([
         declare_useSimTime,
         declare_worldName,
         declare_rviz,
         declare_useBoundary,
         declare_robotName,
-        navigation_boundary_node,
-        rviz_node,
         OpaqueFunction(function=launch_tare_node, args=[worldName, robotName])
     ])

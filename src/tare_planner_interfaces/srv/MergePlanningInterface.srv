@@ -1,0 +1,5 @@
+PlanningInterface planning_interface
+int64 robot_id
+---
+PlanningInterface[] planning_interfaces
+int64[] robot_ids

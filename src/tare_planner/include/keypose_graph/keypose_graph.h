@@ -108,6 +108,8 @@ private:
 public:
   KeyposeGraph(rclcpp::Node::SharedPtr nh);
   ~KeyposeGraph() = default;
+  static KeyposeGraph merge(rclcpp::Node::SharedPtr nh, KeyposeGraph& graph1, KeyposeGraph& graph2);
+  static KeyposeGraph copy(rclcpp::Node::SharedPtr nh, KeyposeGraph& graph);
   void FromMsg(const tare_planner_interfaces::msg::KeyposeGraph& msg);
   tare_planner_interfaces::msg::KeyposeGraph ToMsg() const;
   void ReadParameters(rclcpp::Node::SharedPtr nh);
@@ -135,6 +137,7 @@ public:
   void CheckLocalCollision(const geometry_msgs::msg::Point& robot_position,
                            const std::shared_ptr<viewpoint_manager_ns::ViewPointManager>& viewpoint_manager);
   void UpdateNodes();
+  void UpdateConnectedNodes();
   void CheckConnectivity(const geometry_msgs::msg::Point& robot_position);
   int AddKeyposeNode(const nav_msgs::msg::Odometry& keypose, const planning_env_ns::PlanningEnv& planning_env);
   bool HasEdgeBetween(int node_ind1, int node_ind2);
@@ -158,6 +161,10 @@ public:
                          bool get_path, nav_msgs::msg::Path& path, bool use_connected_nodes = false);
 
   double& SetAddNodeMinDist()
+  {
+    return kAddNodeMinDist;
+  }
+  double GetAddNodeMinDist()
   {
     return kAddNodeMinDist;
   }

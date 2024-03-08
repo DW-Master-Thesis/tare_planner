@@ -1,0 +1,42 @@
+/**:
+  ros__parameters:
+    num_robots : 2
+    merge_service_name : /merge_planning_interface
+
+    # KeyposeGraph
+    keypose_graph/kAddNodeMinDist : 1.0
+    keypose_graph/kAddNonKeyposeNodeMinDist : 0.5
+    keypose_graph/kAddEdgeConnectDistThr : 3.0
+    keypose_graph/kAddEdgeToLastKeyposeDistThr : 3.0
+    keypose_graph/kAddEdgeVerticalThreshold : 1.0
+    keypose_graph/kAddEdgeCollisionCheckResolution : 0.4
+    keypose_graph/kAddEdgeCollisionCheckRadius : 0.4
+    keypose_graph/kAddEdgeCollisionCheckPointNumThr : 1
+
+    # ViewPointManager
+    viewpoint_manager/number_x : 50
+    viewpoint_manager/number_y : 50
+    viewpoint_manager/number_z : 1
+    viewpoint_manager/resolution_x : 0.6
+    viewpoint_manager/resolution_y : 0.6
+    viewpoint_manager/resolution_z : 0.0
+    kConnectivityHeightDiffThr : 0.25
+    kGreedyViewPointSampleRange : 3
+    kLocalPathOptimizationItrMax : 10
+    kViewPointCollisionMargin : 0.5
+    kViewPointCollisionMarginZPlus : 0.5
+    kViewPointCollisionMarginZMinus : 0.5
+    kCollisionGridZScale : 1.0
+    kCollisionGridResolutionX : 0.2
+    kCollisionGridResolutionY : 0.2
+    kCollisionGridResolutionZ : 0.0
+    kCollisionPointThr : 1
+    kLineOfSightStopAtNearestObstacle : false
+    kViewPointHeightFromTerrain : 0.75
+    kViewPointHeightFromTerrainChangeThreshold : 0.6
+    kCheckDynamicObstacleCollision : false
+    kCollisionFrameCountMax : 3
+    kSensorRange : 7.5
+    kNeighborRange : 3.0
+    kCoverageOcclusionThr : 0.3
+    kCoverageDilationRadius : 0.5

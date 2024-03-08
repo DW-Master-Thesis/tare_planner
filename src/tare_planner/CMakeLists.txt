@@ -11,10 +11,10 @@ if(NOT CMAKE_CXX_STANDARD)
   set(CMAKE_CXX_STANDARD 14)
 endif()
 
-if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-  add_compile_options(-Wall -Wextra -Wpedantic)
-endif()
-
+# if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+#   add_compile_options(-Wall -Wextra -Wpedantic)
+# endif()
+#
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
@@ -100,7 +100,7 @@ target_link_libraries(pointcloud_manager ${catkin_LIBRARIES})
 
 add_library(keypose_graph src/keypose_graph/keypose_graph.cpp)
 ament_target_dependencies(keypose_graph rclcpp std_msgs nav_msgs geometry_msgs sensor_msgs tf2_ros tf2_geometry_msgs tf2 tare_planner_interfaces)
-target_link_libraries(keypose_graph ${catkin_LIBRARIES} ${PCL_LIBRARIES} viewpoint_manager)
+target_link_libraries(keypose_graph ${catkin_LIBRARIES} ${PCL_LIBRARIES} viewpoint_manager planning_env pointcloud_manager)
 
 add_library(rolling_occupancy_grid src/rolling_occupancy_grid/rolling_occupancy_grid.cpp)
 ament_target_dependencies(rolling_occupancy_grid rclcpp std_msgs nav_msgs geometry_msgs sensor_msgs tf2_ros tf2_geometry_msgs tf2 pcl_ros pcl_conversions visualization_msgs tare_planner_interfaces)
@@ -130,12 +130,17 @@ add_executable(tare_planner_node src/tare_planner_node/tare_planner_node.cpp)
 ament_target_dependencies(tare_planner_node rclcpp std_msgs nav_msgs geometry_msgs sensor_msgs tf2_ros tf2_geometry_msgs tf2)
 target_link_libraries(tare_planner_node ${catkin_LIBRARIES} sensor_coverage_planner_ground)
 
+add_executable(planning_interface_merger src/planner_interface_merger/planning_interface_merger.cpp)
+ament_target_dependencies(planning_interface_merger rclcpp tare_planner_interfaces)
+target_link_libraries(planning_interface_merger ${catkin_LIBRARIES} keypose_graph viewpoint_manager)
+
 #############
 ## Install ##
 #############
 
 install(TARGETS
   tare_planner_node
+  planning_interface_merger
   DESTINATION lib/${PROJECT_NAME})
 
 install(DIRECTORY launch/

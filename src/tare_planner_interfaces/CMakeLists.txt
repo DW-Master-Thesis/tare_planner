@@ -21,6 +21,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/RollingGrid.msg"
   "msg/ViewpointManager.msg"
   "msg/PlanningInterface.msg"
+  "srv/MergePlanningInterface.srv"
   DEPENDENCIES geometry_msgs
 )
 

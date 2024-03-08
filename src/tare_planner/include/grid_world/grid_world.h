@@ -216,6 +216,10 @@ public:
                      double cell_height = 6.0, int nearby_grid_num = 5);
   ~GridWorld() = default;
   void ReadParameters(rclcpp::Node::SharedPtr nh);
+  inline double GetCellSize()
+  {
+    return kCellSize;
+  }
   void UpdateNeighborCells(const geometry_msgs::msg::Point& robot_position);
   void UpdateRobotPosition(const geometry_msgs::msg::Point& robot_position);
   void UpdateCellKeyposeGraphNodes(const std::shared_ptr<keypose_graph_ns::KeyposeGraph>& keypose_graph);
@@ -314,7 +318,7 @@ public:
   bool IsRobotPositionSet(int cell_ind);
   void Reset();
   int GetCellStatusCount(grid_world_ns::CellStatus status);
-  void UpdateCellStatus(const std::shared_ptr<viewpoint_manager_ns::ViewPointManager>& viewpoint_manager);
+  void UpdateCellStatus(const std::shared_ptr<viewpoint_manager_ns::ViewPointManager>& viewpoint_manager, bool others=false);
   exploration_path_ns::ExplorationPath
   SolveGlobalTSP(const std::shared_ptr<viewpoint_manager_ns::ViewPointManager>& viewpoint_manager,
                  std::vector<int>& ordered_cell_indices,

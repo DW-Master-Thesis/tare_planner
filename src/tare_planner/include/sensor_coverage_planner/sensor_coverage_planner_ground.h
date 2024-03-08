@@ -50,7 +50,7 @@
 #include "exploration_path/exploration_path.h"
 #include "local_coverage_planner/local_coverage_planner.h"
 #include "tare_visualizer/tare_visualizer.h"
-#include <tare_planner_interfaces/msg/planning_interface.hpp>
+#include "tare_planner_interfaces/srv/merge_planning_interface.hpp"
 
 #define cursup "\033[A"
 #define cursclean "\033[2K"
@@ -188,14 +188,14 @@ private:
   std::string sub_coverage_boundary_topic_;
   std::string sub_viewpoint_boundary_topic_;
   std::string sub_nogo_boundary_topic_;
-  std::string sub_planning_interface_topic_;
 
   std::string pub_exploration_finish_topic_;
   std::string pub_runtime_breakdown_topic_;
   std::string pub_runtime_topic_;
   std::string pub_waypoint_topic_;
   std::string pub_momentum_activation_count_topic_;
-  std::string pub_planning_interface_topic_;
+
+  std::string planning_interface_merge_service_name_;
 
   // Bool
   bool kAutoStart;
@@ -219,6 +219,7 @@ private:
   // Int
   int kDirectionChangeCounterThr;
   int kDirectionNoChangeCounterThr;
+  int kRobotId;
 
   std::shared_ptr<pointcloud_utils_ns::PCLCloud<PlannerCloudPointType>> keypose_cloud_;
   std::shared_ptr<pointcloud_utils_ns::PCLCloud<pcl::PointXYZ>> registered_scan_stack_;
@@ -253,6 +254,7 @@ private:
   Eigen::Vector3d initial_position_;
 
   std::shared_ptr<keypose_graph_ns::KeyposeGraph> keypose_graph_;
+  std::shared_ptr<keypose_graph_ns::KeyposeGraph> merged_keypose_graph_;
   std::shared_ptr<planning_env_ns::PlanningEnv> planning_env_;
   std::shared_ptr<viewpoint_manager_ns::ViewPointManager> viewpoint_manager_;
   std::shared_ptr<local_coverage_planner_ns::LocalCoveragePlanner> local_coverage_planner_;
@@ -261,6 +263,7 @@ private:
 
   std::shared_ptr<keypose_graph_ns::KeyposeGraph> published_keypose_graph_;
   std::shared_ptr<viewpoint_manager_ns::ViewPointManager> published_viewpoint_manager_;
+  std::shared_ptr<tare_planner_interfaces::srv::MergePlanningInterface::Response> merged_planning_interface_response_;
 
   std::shared_ptr<misc_utils_ns::Marker> keypose_graph_node_marker_;
   std::shared_ptr<misc_utils_ns::Marker> keypose_graph_edge_marker_;
@@ -282,6 +285,7 @@ private:
   bool use_momentum_;
   bool lookahead_point_in_line_of_sight_;
   bool planning_interface_update_;
+  bool planning_interface_request_sent_;
   // PlannerParameters pp_;
   // PlannerData pd_;
   pointcloud_utils_ns::PointCloudDownsizer<pcl::PointXYZ> pointcloud_downsizer_;
@@ -316,7 +320,6 @@ private:
   rclcpp::Subscription<geometry_msgs::msg::PolygonStamped>::SharedPtr coverage_boundary_sub_;
   rclcpp::Subscription<geometry_msgs::msg::PolygonStamped>::SharedPtr viewpoint_boundary_sub_;
   rclcpp::Subscription<geometry_msgs::msg::PolygonStamped>::SharedPtr nogo_boundary_sub_;
-  rclcpp::Subscription<tare_planner_interfaces::msg::PlanningInterface>::SharedPtr planning_interface_sub_;
 
   // ROS publishers
   rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr global_path_full_publisher_;
@@ -330,7 +333,10 @@ private:
   rclcpp::Publisher<std_msgs::msg::Int32MultiArray>::SharedPtr runtime_breakdown_pub_;
   rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr runtime_pub_;
   rclcpp::Publisher<std_msgs::msg::Int32>::SharedPtr momentum_activation_count_pub_;
-  rclcpp::Publisher<tare_planner_interfaces::msg::PlanningInterface>::SharedPtr planning_interface_pub_;
+
+  // ROS services
+  rclcpp::Client<tare_planner_interfaces::srv::MergePlanningInterface>::SharedPtr planning_interface_merge_client_;
+
   // Debug
   rclcpp::Publisher<geometry_msgs::msg::PointStamped>::SharedPtr pointcloud_manager_neighbor_cells_origin_pub_;
 
@@ -346,7 +352,8 @@ private:
   void CoverageBoundaryCallback(const geometry_msgs::msg::PolygonStamped::ConstSharedPtr polygon_msg);
   void ViewPointBoundaryCallback(const geometry_msgs::msg::PolygonStamped::ConstSharedPtr polygon_msg);
   void NogoBoundaryCallback(const geometry_msgs::msg::PolygonStamped::ConstSharedPtr polygon_msg);
-  void PlanningInterfaceCallback(const tare_planner_interfaces::msg::PlanningInterface::ConstSharedPtr planning_interface_msg);
+  void PlanningInterfaceRequestCallback();
+  void PlanningInterfaceResponseCallback(rclcpp::Client<tare_planner_interfaces::srv::MergePlanningInterface>::SharedFuture future);
 
   void SendInitialWaypoint();
   void UpdateKeyposeGraph();
@@ -356,6 +363,7 @@ private:
   void UpdateCoveredAreas(int& uncovered_point_num, int& uncovered_frontier_point_num);
   void UpdateVisitedPositions();
   void UpdateGlobalRepresentation();
+  void UpdateMergedPlanningInterface();
   void GlobalPlanning(std::vector<int>& global_cell_tsp_order, exploration_path_ns::ExplorationPath& global_path);
   void PublishGlobalPlanningVisualization(const exploration_path_ns::ExplorationPath& global_path,
                                           const exploration_path_ns::ExplorationPath& local_path);

@@ -1441,20 +1441,20 @@ int ViewPointManager::GetViewPointCandidate()
 nav_msgs::msg::Path ViewPointManager::GetViewPointShortestPath(int start_viewpoint_ind, int target_viewpoint_ind)
 {
   nav_msgs::msg::Path path;
-  if (!InRange(start_viewpoint_ind))
-  {
-    RCLCPP_WARN_STREAM(rclcpp::get_logger("standalone_logger"),
-                       "ViewPointManager::GetViewPointShortestPath start viewpoint ind: " << start_viewpoint_ind
-                                                                                          << " not in range");
-    return path;
-  }
-  if (!InRange(target_viewpoint_ind))
-  {
-    RCLCPP_WARN_STREAM(rclcpp::get_logger("standalone_logger"),
-                       "ViewPointManager::GetViewPointShortestPath target viewpoint ind: " << target_viewpoint_ind
-                                                                                           << " not in range");
-    return path;
-  }
+  // if (!InRange(start_viewpoint_ind))
+  // {
+  //   RCLCPP_WARN_STREAM(rclcpp::get_logger("standalone_logger"),
+  //                      "ViewPointManager::GetViewPointShortestPath start viewpoint ind: " << start_viewpoint_ind
+  //                                                                                         << " not in range");
+  //   return path;
+  // }
+  // if (!InRange(target_viewpoint_ind))
+  // {
+  //   RCLCPP_WARN_STREAM(rclcpp::get_logger("standalone_logger"),
+  //                      "ViewPointManager::GetViewPointShortestPath target viewpoint ind: " << target_viewpoint_ind
+  //                                                                                          << " not in range");
+  //   return path;
+  // }
 
   int start_graph_ind = graph_index_map_[start_viewpoint_ind];
   int target_graph_ind = graph_index_map_[target_viewpoint_ind];
@@ -1481,20 +1481,20 @@ nav_msgs::msg::Path ViewPointManager::GetViewPointShortestPath(const Eigen::Vect
                                                                const Eigen::Vector3d& target_position)
 {
   nav_msgs::msg::Path path;
-  if (!InLocalPlanningHorizon(start_position))
-  {
-    RCLCPP_WARN_STREAM(rclcpp::get_logger("standalone_logger"),
-                       "ViewPointManager::GetViewPointShortestPath start position "
-                           << start_position.transpose() << " not in local planning horizon");
-    return path;
-  }
-  if (!InLocalPlanningHorizon(target_position))
-  {
-    RCLCPP_WARN_STREAM(rclcpp::get_logger("standalone_logger"),
-                       "ViewPointManager::GetViewPointShortestPath target position "
-                           << target_position.transpose() << " not in local planning horizon");
-    return path;
-  }
+  // if (!InLocalPlanningHorizon(start_position))
+  // {
+  //   RCLCPP_WARN_STREAM(rclcpp::get_logger("standalone_logger"),
+  //                      "ViewPointManager::GetViewPointShortestPath start position "
+  //                          << start_position.transpose() << " not in local planning horizon");
+  //   return path;
+  // }
+  // if (!InLocalPlanningHorizon(target_position))
+  // {
+  //   RCLCPP_WARN_STREAM(rclcpp::get_logger("standalone_logger"),
+  //                      "ViewPointManager::GetViewPointShortestPath target position "
+  //                          << target_position.transpose() << " not in local planning horizon");
+  //   return path;
+  // }
   int start_viewpoint_ind = GetNearestCandidateViewPointInd(start_position);
   int target_viewpoint_ind = GetNearestCandidateViewPointInd(target_position);
 
@@ -1549,23 +1549,14 @@ void ViewPointManager::UpdateCandidateViewPointCellStatus(std::shared_ptr<grid_w
   for (const auto& ind : candidate_indices_)
   {
     int cell_ind = GetViewPointCellInd(ind);
-    if (grid_world->IndInBound(cell_ind))
+    grid_world_ns::CellStatus cell_status = grid_world->GetCellStatus(cell_ind);
+    if (cell_status == grid_world_ns::CellStatus::UNSEEN || cell_status == grid_world_ns::CellStatus::EXPLORING)
     {
-      grid_world_ns::CellStatus cell_status = grid_world->GetCellStatus(cell_ind);
-      if (cell_status == grid_world_ns::CellStatus::UNSEEN || cell_status == grid_world_ns::CellStatus::EXPLORING)
-      {
-        SetViewPointInExploringCell(ind, true);
-      }
-      else
-      {
-        SetViewPointInExploringCell(ind, false);
-      }
+      SetViewPointInExploringCell(ind, true);
     }
     else
     {
-      RCLCPP_WARN_STREAM(rclcpp::get_logger("standalone_logger"),
-                         "ViewPointManager::UpdateCandidateViewPointCellStatus: cell ind " << cell_ind
-                                                                                           << " out of bound");
+      SetViewPointInExploringCell(ind, false);
     }
   }
 }

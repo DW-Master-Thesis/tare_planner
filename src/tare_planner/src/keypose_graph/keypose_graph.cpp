@@ -64,6 +64,87 @@ KeyposeGraph::KeyposeGraph(rclcpp::Node::SharedPtr nh)
   nodes_cloud_ = pcl::PointCloud<pcl::PointXYZI>::Ptr(new pcl::PointCloud<pcl::PointXYZI>);
 }
 
+KeyposeGraph KeyposeGraph::copy(rclcpp::Node::SharedPtr nh, KeyposeGraph& graph)
+{
+  KeyposeGraph copied_graph(nh);
+  copied_graph.SetAddNodeMinDist() = graph.GetAddNodeMinDist();
+  copied_graph.current_keypose_id_ = graph.current_keypose_id_;
+  copied_graph.current_keypose_position_ = graph.current_keypose_position_;
+  int merged_graph_node_ind = 0;
+  for (int node_ind = 0; node_ind < graph.GetNodeNum(); node_ind++)
+  {
+    auto node = graph.nodes_[node_ind];
+    auto dist = graph.dist_[node_ind];
+    auto graph_ = graph.graph_[node_ind];
+    copied_graph.AddNode(node.position_, merged_graph_node_ind, node.keypose_id_, node.is_keypose_);
+    copied_graph.nodes_[merged_graph_node_ind].is_connected_ = node.is_connected_;
+    if (node.is_connected_)
+    {
+      copied_graph.connected_node_indices_.push_back(merged_graph_node_ind);
+    }
+    for (int i = 0; i < graph_.size(); i++)
+    {
+      if (graph_[i] > node_ind)
+      {
+        continue;
+      }
+      if (copied_graph.HasEdgeBetween(merged_graph_node_ind, graph_[i]))
+      {
+        continue;
+      }
+      copied_graph.AddEdge(merged_graph_node_ind, graph_[i], dist[i]);
+    }
+    merged_graph_node_ind++;
+  }
+  copied_graph.UpdateNodes();
+  copied_graph.UpdateConnectedNodes();
+  return copied_graph;
+}
+
+KeyposeGraph KeyposeGraph::merge(rclcpp::Node::SharedPtr nh, KeyposeGraph& graph1, KeyposeGraph& graph2)
+{
+  KeyposeGraph merged_graph = KeyposeGraph::copy(nh, graph1);
+  int graph1_node_num = graph1.GetNodeNum();
+  for (int i = 0; i < graph2.GetNodeNum(); i++)
+  {
+    auto node = graph2.nodes_[i];
+    auto dist = graph2.dist_[i];
+    auto graph = graph2.graph_[i];
+    Eigen::Vector3d position;
+    position.x() = node.position_.x;
+    position.y() = node.position_.y;
+    position.z() = node.position_.z;
+    int node_ind = merged_graph.GetNodeNum();
+    merged_graph.AddNode(node.position_, node_ind, node.keypose_id_, node.is_keypose_);
+    merged_graph.nodes_[node_ind].is_connected_ = node.is_connected_;
+    for (int i = 0; i < graph.size(); i++)
+    {
+      if (graph[i] > node_ind - graph1_node_num)
+      {
+        continue;
+      }
+      merged_graph.AddEdge(node_ind, graph[i] + graph1_node_num, dist[i]);
+    }
+    if (merged_graph.IsPositionReachable(node.position_))
+    {
+      int closest_node_ind = -1;
+      double closest_node_dist = DBL_MAX;
+      merged_graph.GetClosestNodeIndAndDistance(node.position_, closest_node_ind, closest_node_dist);
+      if (closest_node_ind >= 0 && closest_node_ind < merged_graph.GetNodeNum())
+      {
+        merged_graph.AddEdge(closest_node_ind, node_ind, closest_node_dist);
+      }
+    }
+    if (merged_graph.nodes_[node_ind].is_connected_)
+    {
+      merged_graph.connected_node_indices_.push_back(node_ind);
+    }
+  }
+  merged_graph.UpdateNodes();
+  merged_graph.UpdateConnectedNodes();
+  return merged_graph;
+}
+
 void KeyposeGraph::FromMsg(const tare_planner_interfaces::msg::KeyposeGraph& msg)
 {
   graph_.clear();
@@ -554,63 +635,14 @@ void KeyposeGraph::UpdateNodes()
   }
 }
 
-void KeyposeGraph::CheckConnectivity(const geometry_msgs::msg::Point& robot_position)
-{
-  if (nodes_.empty())
-  {
-    return;
-  }
-  UpdateNodes();
-
-  // The first keypose node is always connected, set all the others to be disconnected
-  int first_keypose_node_ind = -1;
-  bool found_connected = false;
-
-  for (int i = 0; i < nodes_.size(); i++)
-  {
-    if (nodes_[i].is_keypose_)
-    {
-      first_keypose_node_ind = i;
-      break;
-    }
-  }
-
-  // Check the connectivity starting from the robot
-  for (int i = 0; i < nodes_.size(); i++)
-  {
-    nodes_[i].is_connected_ = false;
-  }
-  if (first_keypose_node_ind >= 0 && first_keypose_node_ind < nodes_.size())
-  {
-    nodes_[first_keypose_node_ind].is_connected_ = true;
-    connected_node_indices_.clear();
-    std::vector<bool> constraint(nodes_.size(), true);
-    GetConnectedNodeIndices(first_keypose_node_ind, connected_node_indices_, constraint);
-  }
-  else
-  {
-    int robot_node_ind = -1;
-    double robot_node_dist = DBL_MAX;
-    GetClosestNodeIndAndDistance(robot_position, robot_node_ind, robot_node_dist);
-    if (robot_node_ind >= 0 && robot_node_ind < nodes_.size())
-    {
-      nodes_[robot_node_ind].is_connected_ = true;
-      connected_node_indices_.clear();
-      std::vector<bool> constraint(nodes_.size(), true);
-      GetConnectedNodeIndices(robot_node_ind, connected_node_indices_, constraint);
-    }
-    else
-    {
-      RCLCPP_ERROR_STREAM(rclcpp::get_logger("standalone_logger"),
-                          "KeyposeGraph::CheckConnectivity: Cannot get closest robot node ind " << robot_node_ind);
-    }
-  }
-
+void KeyposeGraph::UpdateConnectedNodes() {
   connected_nodes_cloud_->clear();
-  for (int i = 0; i < connected_node_indices_.size(); i++)
+  for (int node_ind = 0; node_ind < nodes_.size(); node_ind++)
   {
-    int node_ind = connected_node_indices_[i];
-    nodes_[node_ind].is_connected_ = true;
+    if (!nodes_[node_ind].is_connected_)
+    {
+      continue;
+    }
     pcl::PointXYZI point;
     point.x = nodes_[node_ind].position_.x;
     point.y = nodes_[node_ind].position_.y;
@@ -622,6 +654,42 @@ void KeyposeGraph::CheckConnectivity(const geometry_msgs::msg::Point& robot_posi
   {
     kdtree_connected_nodes_->setInputCloud(connected_nodes_cloud_);
   }
+}
+
+void KeyposeGraph::CheckConnectivity(const geometry_msgs::msg::Point& robot_position)
+{
+  if (nodes_.empty())
+  {
+    return;
+  }
+  UpdateNodes();
+
+  // Check the connectivity starting from the robot
+  for (int i = 0; i < nodes_.size(); i++)
+  {
+    nodes_[i].is_connected_ = false;
+  }
+  int robot_node_ind = -1;
+  double robot_node_dist = DBL_MAX;
+  GetClosestNodeIndAndDistance(robot_position, robot_node_ind, robot_node_dist);
+  if (robot_node_ind >= 0 && robot_node_ind < nodes_.size())
+  {
+    nodes_[robot_node_ind].is_connected_ = true;
+    connected_node_indices_.clear();
+    std::vector<bool> constraint(nodes_.size(), true);
+    GetConnectedNodeIndices(robot_node_ind, connected_node_indices_, constraint);
+  }
+  else
+  {
+    RCLCPP_ERROR_STREAM(rclcpp::get_logger("standalone_logger"),
+                        "KeyposeGraph::CheckConnectivity: Cannot get closest robot node ind " << robot_node_ind);
+  }
+  for (int i = 0; i < connected_node_indices_.size(); i++)
+  {
+    int node_ind = connected_node_indices_[i];
+    nodes_[node_ind].is_connected_ = true;
+  }
+  UpdateConnectedNodes();
 }
 
 int KeyposeGraph::AddKeyposeNode(const nav_msgs::msg::Odometry& keypose,

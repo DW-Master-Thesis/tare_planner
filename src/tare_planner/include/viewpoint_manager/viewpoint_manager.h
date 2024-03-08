@@ -112,6 +112,11 @@ public:
   {
     return grid_->InRange(sub);
   }
+  inline bool InRange(const Eigen::Vector3d& position)
+  {
+    auto sub = GetViewPointSub(position);
+    return grid_->InRange(sub);
+  }
   inline int GetViewPointNum()
   {
     return viewpoints_.size();
@@ -130,6 +135,14 @@ public:
     nogo_boundary_ = nogo_boundary;
   }
   bool UpdateRobotPosition(const Eigen::Vector3d& robot_position);
+  geometry_msgs::msg::Point GetRobotPosition()
+  {
+    geometry_msgs::msg::Point robot_position;
+    robot_position.x = robot_position_(0);
+    robot_position.y = robot_position_(1);
+    robot_position.z = robot_position_(2);
+    return robot_position;
+  }
   void UpdateOrigin();
   Eigen::Vector3i GetViewPointSub(Eigen::Vector3d position);
   int GetViewPointInd(Eigen::Vector3d position);

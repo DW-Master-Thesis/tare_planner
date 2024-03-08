@@ -336,6 +336,14 @@ void GridWorld::GetMarker(visualization_msgs::msg::Marker& marker)
           color.a = 0.1;
           covered_count++;
         }
+        else if (subspaces_->GetCell(cell_ind).GetStatus() == CellStatus::COVERED_BY_OTHERS)
+        {
+          color.r = 0.8;
+          color.g = 0.0;
+          color.b = 0.8;
+          color.a = 0.1;
+          covered_count++;
+        }
         else if (subspaces_->GetCell(cell_ind).GetStatus() == CellStatus::EXPLORING)
         {
           color.r = 0.0;
@@ -533,9 +541,9 @@ int GridWorld::GetCellStatusCount(grid_world_ns::CellStatus status)
   return count;
 }
 
-void GridWorld::UpdateCellStatus(const std::shared_ptr<viewpoint_manager_ns::ViewPointManager>& viewpoint_manager)
+void GridWorld::UpdateCellStatus(const std::shared_ptr<viewpoint_manager_ns::ViewPointManager>& viewpoint_manager, bool others)
 {
-  for (const auto& cell_ind : neighbor_cell_indices_)
+  for (int cell_ind = 0; cell_ind < subspaces_->GetCellNumber(); cell_ind++)
   {
     subspaces_->GetCell(cell_ind).ClearViewPointIndices();
   }
@@ -544,19 +552,12 @@ void GridWorld::UpdateCellStatus(const std::shared_ptr<viewpoint_manager_ns::Vie
     geometry_msgs::msg::Point viewpoint_position = viewpoint_manager->GetViewPointPosition(viewpoint_ind);
     Eigen::Vector3i sub =
         subspaces_->Pos2Sub(Eigen::Vector3d(viewpoint_position.x, viewpoint_position.y, viewpoint_position.z));
-    if (subspaces_->InRange(sub))
-    {
-      int cell_ind = subspaces_->Sub2Ind(sub);
-      AddViewPointToCell(cell_ind, viewpoint_ind);
-      viewpoint_manager->SetViewPointCellInd(viewpoint_ind, cell_ind);
-    }
-    else
-    {
-      RCLCPP_ERROR_STREAM(rclcpp::get_logger("standalone_logger"), "subspace sub out of bound: " << sub.transpose());
-    }
+    int cell_ind = subspaces_->Sub2Ind(sub);
+    AddViewPointToCell(cell_ind, viewpoint_ind);
+    viewpoint_manager->SetViewPointCellInd(viewpoint_ind, cell_ind);
   }
 
-  for (const auto& cell_ind : neighbor_cell_indices_)
+  for (int cell_ind = 0; cell_ind < subspaces_->GetCellNumber(); cell_ind++)
   {
     if (subspaces_->GetCell(cell_ind).GetStatus() == CellStatus::COVERED_BY_OTHERS)
     {
@@ -594,6 +595,17 @@ void GridWorld::UpdateCellStatus(const std::shared_ptr<viewpoint_manager_ns::Vie
         above_frontier_threshold_count++;
       }
     }
+    // Exploring to Covered by others
+    if (others &&
+        above_frontier_threshold_count < kCellExploringToCoveredThr &&
+        above_small_threshold_count < kCellExploringToCoveredThr && selected_viewpoint_count == 0 &&
+        candidate_count > 0)
+    {
+      RCLCPP_INFO_STREAM(rclcpp::get_logger("standalone_logger"), "GridWorld::UpdateCellStatus: cell " << cell_ind
+                                                                                                      << " covered by others");
+      subspaces_->GetCell(cell_ind).SetStatus(CellStatus::COVERED_BY_OTHERS);
+      continue;
+    }
     // Exploring to Covered
     if (subspaces_->GetCell(cell_ind).GetStatus() == CellStatus::EXPLORING &&
         above_frontier_threshold_count < kCellExploringToCoveredThr &&
@@ -616,6 +628,7 @@ void GridWorld::UpdateCellStatus(const std::shared_ptr<viewpoint_manager_ns::Vie
     {
       almost_covered_cell_indices_.push_back(cell_ind);
     }
+    // Any status other than COVERED to Explorting
     else if (subspaces_->GetCell(cell_ind).GetStatus() != CellStatus::COVERED && selected_viewpoint_count > 0)
     {
       subspaces_->GetCell(cell_ind).SetStatus(CellStatus::EXPLORING);
@@ -718,8 +731,7 @@ exploration_path_ns::ExplorationPath GridWorld::SolveGlobalTSP(
   {
     if (subspaces_->GetCell(i).GetStatus() == CellStatus::EXPLORING)
     {
-      if (std::find(neighbor_cell_indices_.begin(), neighbor_cell_indices_.end(), i) == neighbor_cell_indices_.end() ||
-          (subspaces_->GetCell(i).GetViewPointIndices().empty() && subspaces_->GetCell(i).GetVisitCount() > 1))
+      if (std::find(neighbor_cell_indices_.begin(), neighbor_cell_indices_.end(), i) == neighbor_cell_indices_.end())
       {
         if (!use_keypose_graph_ || keypose_graph == nullptr || keypose_graph->GetNodeNum() == 0)
         {
@@ -845,7 +857,7 @@ exploration_path_ns::ExplorationPath GridWorld::SolveGlobalTSP(
         nav_msgs::msg::Path path_tmp;
         distance_matrix[i][j] =
             static_cast<int>(10 * keypose_graph->GetShortestPath(exploring_cell_positions[i],
-                                                                 exploring_cell_positions[j], false, path_tmp, false));
+                                                                 exploring_cell_positions[j], false, path_tmp, true));
       }
     }
   }
@@ -907,7 +919,7 @@ exploration_path_ns::ExplorationPath GridWorld::SolveGlobalTSP(
       next_position = exploring_cell_positions[next_ind];
 
       nav_msgs::msg::Path keypose_path;
-      keypose_graph->GetShortestPath(cur_position, next_position, true, keypose_path, false);
+      keypose_graph->GetShortestPath(cur_position, next_position, true, keypose_path, true);
 
       exploration_path_ns::Node node(Eigen::Vector3d(cur_position.x, cur_position.y, cur_position.z));
       if (i == 0)
@@ -995,30 +1007,39 @@ void GridWorld::AddPathsInBetweenCells(const std::shared_ptr<viewpoint_manager_n
       }
     }
 
-    std::vector<int> candidate_viewpoint_indices = subspaces_->GetCell(cell_ind).GetViewPointIndices();
-    if (!candidate_viewpoint_indices.empty())
+    // Find candidate viewpoint in current cell that is closest to the cell center
+    double min_dist = DBL_MAX;
+    double min_dist_viewpoint_ind = -1;
+    for (auto j: subspaces_->GetCell(cell_ind).GetGraphNodeIndices())
     {
-      double min_dist = DBL_MAX;
-      double min_dist_viewpoint_ind = candidate_viewpoint_indices.front();
-      for (const auto& viewpoint_ind : candidate_viewpoint_indices)
+      geometry_msgs::msg::Point viewpoint_position = keypose_graph->GetNodePosition(j);
+      Eigen::Vector3i sub =
+          subspaces_->Pos2Sub(Eigen::Vector3d(viewpoint_position.x, viewpoint_position.y, viewpoint_position.z));
+      if (subspaces_->Sub2Ind(sub) != cell_ind)
       {
-        geometry_msgs::msg::Point viewpoint_position = viewpoint_manager->GetViewPointPosition(viewpoint_ind);
-        double dist_to_cell_center = misc_utils_ns::PointXYDist<geometry_msgs::msg::Point, geometry_msgs::msg::Point>(
-            viewpoint_position, subspaces_->GetCell(cell_ind).GetPosition());
-        if (dist_to_cell_center < min_dist)
-        {
-          min_dist = dist_to_cell_center;
-          min_dist_viewpoint_ind = viewpoint_ind;
-        }
+        continue;
       }
-      geometry_msgs::msg::Point min_dist_viewpoint_position =
-          viewpoint_manager->GetViewPointPosition(min_dist_viewpoint_ind);
-      subspaces_->GetCell(cell_ind).SetRoadmapConnectionPoint(
-          Eigen::Vector3d(min_dist_viewpoint_position.x, min_dist_viewpoint_position.y, min_dist_viewpoint_position.z));
-      subspaces_->GetCell(cell_ind).SetRoadmapConnectionPointSet(true);
+      double dist_to_cell_center = misc_utils_ns::PointXYDist<geometry_msgs::msg::Point, geometry_msgs::msg::Point>(
+          viewpoint_position, subspaces_->GetCell(cell_ind).GetPosition());
+      if (dist_to_cell_center < min_dist)
+      {
+        min_dist = dist_to_cell_center;
+        min_dist_viewpoint_ind = j;
+      }
     }
+    if (min_dist_viewpoint_ind < 0)
+    {
+      continue;
+    }
+    // Set candidate viewpoint as the roadmap connection point
+    geometry_msgs::msg::Point min_dist_viewpoint_position =
+        keypose_graph->GetNodePosition(min_dist_viewpoint_ind);
+    subspaces_->GetCell(cell_ind).SetRoadmapConnectionPoint(
+        Eigen::Vector3d(min_dist_viewpoint_position.x, min_dist_viewpoint_position.y, min_dist_viewpoint_position.z));
+    subspaces_->GetCell(cell_ind).SetRoadmapConnectionPointSet(true);
   }
 
+  // for (int from_cell_ind = 0; from_cell_ind < subspaces_->GetCellNumber(); from_cell_ind++)
   for (int i = 0; i < neighbor_cell_indices_.size(); i++)
   {
     int from_cell_ind = neighbor_cell_indices_[i];
@@ -1027,14 +1048,12 @@ void GridWorld::AddPathsInBetweenCells(const std::shared_ptr<viewpoint_manager_n
     {
       continue;
     }
-    std::vector<int> from_cell_connected_cell_indices = subspaces_->GetCell(from_cell_ind).GetConnectedCellIndices();
     Eigen::Vector3d from_cell_roadmap_connection_position =
         subspaces_->GetCell(from_cell_ind).GetRoadmapConnectionPoint();
     if (!viewpoint_manager->InLocalPlanningHorizon(from_cell_roadmap_connection_position))
     {
       continue;
     }
-    // Eigen::Vector3i from_cell_sub = ind2sub(from_cell_ind);
     Eigen::Vector3i from_cell_sub = subspaces_->Ind2Sub(from_cell_ind);
     std::vector<int> nearby_cell_indices;
     for (int x = -1; x <= 1; x++)
@@ -1046,10 +1065,8 @@ void GridWorld::AddPathsInBetweenCells(const std::shared_ptr<viewpoint_manager_n
           if (std::abs(x) + std::abs(y) + std::abs(z) == 1)
           {
             Eigen::Vector3i neighbor_sub = from_cell_sub + Eigen::Vector3i(x, y, z);
-            // if (SubInBound(neighbor_sub))
             if (subspaces_->InRange(neighbor_sub))
             {
-              // int neighbor_ind = sub2ind(neighbor_sub);
               int neighbor_ind = subspaces_->Sub2Ind(neighbor_sub);
               nearby_cell_indices.push_back(neighbor_ind);
             }
@@ -1071,7 +1088,6 @@ void GridWorld::AddPathsInBetweenCells(const std::shared_ptr<viewpoint_manager_n
       {
         continue;
       }
-      std::vector<int> to_cell_connected_cell_indices = subspaces_->GetCell(to_cell_ind).GetConnectedCellIndices();
       Eigen::Vector3d to_cell_roadmap_connection_position =
           subspaces_->GetCell(to_cell_ind).GetRoadmapConnectionPoint();
       if (!viewpoint_manager->InLocalPlanningHorizon(to_cell_roadmap_connection_position))
@@ -1083,16 +1099,16 @@ void GridWorld::AddPathsInBetweenCells(const std::shared_ptr<viewpoint_manager_n
       bool connected_in_keypose_graph = HasDirectKeyposeGraphConnection(
           keypose_graph, from_cell_roadmap_connection_position, to_cell_roadmap_connection_position);
 
-      bool forward_connected =
-          std::find(from_cell_connected_cell_indices.begin(), from_cell_connected_cell_indices.end(), to_cell_ind) !=
-          from_cell_connected_cell_indices.end();
-      bool backward_connected = std::find(to_cell_connected_cell_indices.begin(), to_cell_connected_cell_indices.end(),
-                                          from_cell_ind) != to_cell_connected_cell_indices.end();
-
       if (connected_in_keypose_graph)
       {
         continue;
       }
+
+      // if (!viewpoint_manager->InRange(from_cell_roadmap_connection_position) ||
+      //     !viewpoint_manager->InRange(to_cell_roadmap_connection_position))
+      // {
+      //   continue;
+      // }
 
       nav_msgs::msg::Path path_in_between = viewpoint_manager->GetViewPointShortestPath(
           from_cell_roadmap_connection_position, to_cell_roadmap_connection_position);
