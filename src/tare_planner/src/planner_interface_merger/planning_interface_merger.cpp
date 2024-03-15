@@ -87,6 +87,7 @@ void PlanningInterfaceMerger::handleMergePlanningInterface(
   auto viewpointManager = request->planning_interface.viewpoint_manager;
   auto uncoveredPointNumber = request->planning_interface.uncovered_point_num;
   auto uncoveredFrontierPointNumber = request->planning_interface.uncovered_frontier_point_num;
+  rclcpp::sleep_for(std::chrono::seconds(10));
   keyposeGraphs[robotId]->FromMsg(keyposeGraph);
   viewpointManagers[robotId]->FromMsg(viewpointManager);
   uncoveredPointNumbers[robotId] = uncoveredPointNumber;

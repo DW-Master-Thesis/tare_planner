@@ -321,6 +321,7 @@ SensorCoveragePlanner3D::SensorCoveragePlanner3D()
   , lookahead_point_in_line_of_sight_(true)
   , planning_interface_update_(false)
   , planning_interface_request_sent_(false)
+  , planning_interface_response_received_(false)
   , registered_cloud_count_(0)
   , keypose_count_(0)
   , direction_change_count_(0)
@@ -606,6 +607,7 @@ void SensorCoveragePlanner3D::PlanningInterfaceResponseCallback(
   }
   planning_interface_update_ = true;
   planning_interface_request_sent_ = false;
+  planning_interface_response_received_ = true;
 }
 
 void SensorCoveragePlanner3D::SendInitialWaypoint()
@@ -835,10 +837,10 @@ void SensorCoveragePlanner3D::UpdateMergedPlanningInterface()
 void SensorCoveragePlanner3D::GlobalPlanning(std::vector<int>& global_cell_tsp_order,
                                              exploration_path_ns::ExplorationPath& global_path)
 {
-  RCLCPP_INFO(this->get_logger(), "GlobalPlanning");
   misc_utils_ns::Timer global_tsp_timer("Global planning");
   global_tsp_timer.Start();
 
+  // global_path = grid_world_->SolveGlobalTSP(viewpoint_manager_, global_cell_tsp_order, keypose_graph_);
   global_path = grid_world_->SolveGlobalTSP(viewpoint_manager_, global_cell_tsp_order, merged_keypose_graph_);
   grid_world_->UpdateCellStatus(viewpoint_manager_);
   grid_world_->AddPathsInBetweenCells(viewpoint_manager_, keypose_graph_);
@@ -846,7 +848,6 @@ void SensorCoveragePlanner3D::GlobalPlanning(std::vector<int>& global_cell_tsp_o
 
   global_tsp_timer.Stop(false);
   global_planning_runtime_ = global_tsp_timer.GetDuration("ms");
-  RCLCPP_INFO(this->get_logger(), "Finished GlobalPlanning");
 }
 
 void SensorCoveragePlanner3D::PublishGlobalPlanningVisualization(
@@ -1538,17 +1539,21 @@ void SensorCoveragePlanner3D::execute()
     update_representation_timer.Stop(false);
     update_representation_runtime_ += update_representation_timer.GetDuration("ms");
 
-    if (!planning_interface_request_sent_ && !planning_interface_update_)
+    if (!planning_interface_request_sent_)
     {
       PlanningInterfaceRequestCallback();
       planning_interface_request_sent_ = true;
     }
   }
 
-  if (planning_interface_update_)
+  if (planning_interface_response_received_)
   {
     UpdateMergedPlanningInterface();
+      planning_interface_response_received_ = false;
+  }
 
+  if (planning_interface_update_)
+  {
     // Planning
     std::vector<int> global_cell_tsp_order;
     exploration_path_ns::ExplorationPath global_path;
@@ -1568,6 +1573,7 @@ void SensorCoveragePlanner3D::execute()
       if (!exploration_finished_)
       {
         PrintExplorationStatus("Exploration completed, returning home", false);
+        RCLCPP_INFO(rclcpp::get_logger("standalone_logger"), "Time to complete exploration: %f", delta_time);
       }
       exploration_finished_ = true;
     }
@@ -1596,8 +1602,6 @@ void SensorCoveragePlanner3D::execute()
     PublishLocalPlanningVisualization(local_path);
     PublishGlobalPlanningVisualization(global_path, local_path);
     PublishRuntime();
-
-    planning_interface_update_ = false;
   }
 }
 }  // namespace sensor_coverage_planner_3d_ns

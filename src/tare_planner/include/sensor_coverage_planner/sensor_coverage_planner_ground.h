@@ -286,6 +286,7 @@ private:
   bool lookahead_point_in_line_of_sight_;
   bool planning_interface_update_;
   bool planning_interface_request_sent_;
+  bool planning_interface_response_received_;
   // PlannerParameters pp_;
   // PlannerData pd_;
   pointcloud_utils_ns::PointCloudDownsizer<pcl::PointXYZ> pointcloud_downsizer_;

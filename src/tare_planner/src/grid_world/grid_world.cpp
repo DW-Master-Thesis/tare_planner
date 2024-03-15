@@ -601,8 +601,6 @@ void GridWorld::UpdateCellStatus(const std::shared_ptr<viewpoint_manager_ns::Vie
         above_small_threshold_count < kCellExploringToCoveredThr && selected_viewpoint_count == 0 &&
         candidate_count > 0)
     {
-      RCLCPP_INFO_STREAM(rclcpp::get_logger("standalone_logger"), "GridWorld::UpdateCellStatus: cell " << cell_ind
-                                                                                                      << " covered by others");
       subspaces_->GetCell(cell_ind).SetStatus(CellStatus::COVERED_BY_OTHERS);
       continue;
     }
