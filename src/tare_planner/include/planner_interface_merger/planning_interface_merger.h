@@ -20,6 +20,7 @@ private:
   // Parameters
   int numRobots;
   std::string mergeServiceName;
+  int delayInSeconds;
   std::vector<std::shared_ptr<keypose_graph_ns::KeyposeGraph>> keyposeGraphs;
   std::vector<std::shared_ptr<viewpoint_manager_ns::ViewPointManager>> viewpointManagers;
   std::vector<int> uncoveredPointNumbers;

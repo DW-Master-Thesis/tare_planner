@@ -1,6 +1,7 @@
 /**:
   ros__parameters:
     num_robots : 2
+    delay_in_seconds: 1
     merge_service_name : /merge_planning_interface
 
     # KeyposeGraph

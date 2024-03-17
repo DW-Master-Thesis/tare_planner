@@ -6,8 +6,10 @@ PlanningInterfaceMerger::PlanningInterfaceMerger() : Node("planning_interface_me
   // Declare parameters
   this->declare_parameter("num_robots", 1);
   this->declare_parameter("merge_service_name", "merge_planning_interface");
+  this->declare_parameter<int>("delay_in_seconds", 10);
   this->get_parameter("num_robots", numRobots);
   this->get_parameter("merge_service_name", mergeServiceName);
+  this->get_parameter("delay_in_seconds", delayInSeconds);
 
   RCLCPP_INFO(this->get_logger(), "Number of robots: %d", numRobots);
   RCLCPP_INFO(this->get_logger(), "Merge service name: %s", mergeServiceName.c_str());
@@ -87,7 +89,7 @@ void PlanningInterfaceMerger::handleMergePlanningInterface(
   auto viewpointManager = request->planning_interface.viewpoint_manager;
   auto uncoveredPointNumber = request->planning_interface.uncovered_point_num;
   auto uncoveredFrontierPointNumber = request->planning_interface.uncovered_frontier_point_num;
-  rclcpp::sleep_for(std::chrono::seconds(10));
+  rclcpp::sleep_for(std::chrono::seconds(delayInSeconds));
   keyposeGraphs[robotId]->FromMsg(keyposeGraph);
   viewpointManagers[robotId]->FromMsg(viewpointManager);
   uncoveredPointNumbers[robotId] = uncoveredPointNumber;
