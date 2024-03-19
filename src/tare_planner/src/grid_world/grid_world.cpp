@@ -602,7 +602,7 @@ void GridWorld::UpdateCellStatus(const std::shared_ptr<viewpoint_manager_ns::Vie
         candidate_count > 0)
     {
       subspaces_->GetCell(cell_ind).SetStatus(CellStatus::COVERED_BY_OTHERS);
-      continue;
+      // continue;
     }
     // Exploring to Covered
     if (subspaces_->GetCell(cell_ind).GetStatus() == CellStatus::EXPLORING &&
@@ -989,9 +989,10 @@ void GridWorld::AddPathsInBetweenCells(const std::shared_ptr<viewpoint_manager_n
                                        const std::shared_ptr<keypose_graph_ns::KeyposeGraph>& keypose_graph)
 {
   // Determine the connection point in each cell
-  for (int i = 0; i < neighbor_cell_indices_.size(); i++)
+  // for (int i = 0; i < neighbor_cell_indices_.size(); i++)
+  for (int cell_ind = 0; cell_ind < subspaces_->GetCellNumber(); cell_ind++)
   {
-    int cell_ind = neighbor_cell_indices_[i];
+    // int cell_ind = neighbor_cell_indices_[i];
     if (subspaces_->GetCell(cell_ind).IsRoadmapConnectionPointSet())
     {
       if (viewpoint_manager->InLocalPlanningHorizon(subspaces_->GetCell(cell_ind).GetRoadmapConnectionPoint()) &&
@@ -1037,10 +1038,10 @@ void GridWorld::AddPathsInBetweenCells(const std::shared_ptr<viewpoint_manager_n
     subspaces_->GetCell(cell_ind).SetRoadmapConnectionPointSet(true);
   }
 
-  // for (int from_cell_ind = 0; from_cell_ind < subspaces_->GetCellNumber(); from_cell_ind++)
-  for (int i = 0; i < neighbor_cell_indices_.size(); i++)
+  // for (int i = 0; i < neighbor_cell_indices_.size(); i++)
+  for (int from_cell_ind = 0; from_cell_ind < subspaces_->GetCellNumber(); from_cell_ind++)
   {
-    int from_cell_ind = neighbor_cell_indices_[i];
+    // int from_cell_ind = neighbor_cell_indices_[i];
     int viewpoint_num = subspaces_->GetCell(from_cell_ind).GetViewPointIndices().size();
     if (viewpoint_num == 0)
     {

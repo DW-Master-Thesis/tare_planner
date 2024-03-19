@@ -1578,6 +1578,16 @@ void SensorCoveragePlanner3D::execute()
       exploration_finished_ = true;
     }
 
+    if (!grid_world_->IsReturningHome())
+    {
+      if (exploration_finished_)
+      {
+        PrintExplorationStatus("Restarting exploration", false);
+      }
+      exploration_finished_ = false;
+      stopped_ = false;
+    }
+
     if (exploration_finished_ && at_home_ && !stopped_)
     {
       PrintExplorationStatus("Return home completed", false);

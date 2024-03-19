@@ -7,10 +7,11 @@ from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch_ros.actions import Node
 
 
-def launch_tare_node(context, worldName, robotName):
+def launch_tare_node(context, worldName, robotName, rviz):
     world_name_str = str(worldName.perform(context))
     robot_name_str = str(robotName.perform(context))
-    namespace = "robot_" + robot_name_str
+    namespace = robot_name_str
+    robot_id = int(robot_name_str.split('_')[-1])
     tare_planner_node = Node(
         package='tare_planner',
         executable='tare_planner_node',
@@ -18,7 +19,7 @@ def launch_tare_node(context, worldName, robotName):
         output='screen',
         parameters=[
           get_package_share_directory('tare_planner') + "/" + world_name_str + '.yaml',
-        {"kRobotId": int(robot_name_str)},
+        {"kRobotId": int(robot_id)},
         ],
         namespace=namespace,
     )
@@ -29,6 +30,7 @@ def launch_tare_node(context, worldName, robotName):
         arguments=[
             '-d', get_package_share_directory('tare_planner')+'/tare_planner_ground.rviz'],
         namespace=namespace,
+        condition=IfCondition(rviz),
     )
     return [rviz_node, tare_planner_node]
 
@@ -53,12 +55,12 @@ def generate_launch_description():
     )
     declare_robotName = DeclareLaunchArgument(
         'robotName',
-        default_value='0',
+        default_value='robot_0',
         description='',
     )
     declare_rviz = DeclareLaunchArgument(
         'rviz',
-        default_value='true',
+        default_value='false',
         description='',
     )
     declare_useBoundary = DeclareLaunchArgument(
@@ -73,5 +75,5 @@ def generate_launch_description():
         declare_rviz,
         declare_useBoundary,
         declare_robotName,
-        OpaqueFunction(function=launch_tare_node, args=[worldName, robotName])
+        OpaqueFunction(function=launch_tare_node, args=[worldName, robotName,  rviz])
     ])
