@@ -24,7 +24,7 @@
 #include <pcl/point_types.h>
 
 #include <grid/grid.h>
-#include <tsp_solver/tsp_solver.h>
+#include <vrp_solver/vrp_solver.h>
 #include <keypose_graph/keypose_graph.h>
 #include <exploration_path/exploration_path.h>
 
@@ -319,10 +319,17 @@ public:
   void Reset();
   int GetCellStatusCount(grid_world_ns::CellStatus status);
   void UpdateCellStatus(const std::shared_ptr<viewpoint_manager_ns::ViewPointManager>& viewpoint_manager, bool others=false);
-  exploration_path_ns::ExplorationPath
-  SolveGlobalTSP(const std::shared_ptr<viewpoint_manager_ns::ViewPointManager>& viewpoint_manager,
-                 std::vector<int>& ordered_cell_indices,
-                 const std::shared_ptr<keypose_graph_ns::KeyposeGraph>& keypose_graph = nullptr);
+  geometry_msgs::msg::Point GetClosestKeyposeGraphNodePosition(
+    geometry_msgs::msg::Point other_robot_position,
+    const std::shared_ptr<keypose_graph_ns::KeyposeGraph>& keypose_graph,
+    const std::shared_ptr<viewpoint_manager_ns::ViewPointManager>& viewpoint_manager
+  );
+  exploration_path_ns::ExplorationPath SolveGlobalVRP(
+    const std::vector<geometry_msgs::msg::Point>& robot_positions,
+    const std::shared_ptr<viewpoint_manager_ns::ViewPointManager>& viewpoint_manager,
+    std::vector<int>& ordered_cell_indices,
+    const std::shared_ptr<keypose_graph_ns::KeyposeGraph>& keypose_graph = nullptr
+  );
 
   inline void SetCurKeyposeGraphNodeInd(int node_ind)
   {
@@ -397,5 +404,6 @@ private:
   int cur_keypose_graph_node_ind_;
   int cur_robot_cell_ind_;
   int prev_robot_cell_ind_;
+  exploration_path_ns::ExplorationPath prev_global_path;
 };
 }  // namespace grid_world_ns

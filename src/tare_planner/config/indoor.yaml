@@ -19,7 +19,7 @@
     kRushHome : true
     kUseTerrainHeight : false
     kCheckTerrainCollision : true
-    kExtendWayPoint : true
+    kExtendWayPoint : false 
     kUseLineOfSightLookAheadPoint : true
     kNoExplorationReturnHome : true
     kExtendWayPointDistanceBig : 8.0

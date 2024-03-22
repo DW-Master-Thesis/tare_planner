@@ -252,6 +252,7 @@ private:
   std::vector<Eigen::Vector3d> visited_positions_;
   int cur_keypose_node_ind_;
   Eigen::Vector3d initial_position_;
+  std::vector<geometry_msgs::msg::Point> other_robot_positions_;
 
   std::shared_ptr<keypose_graph_ns::KeyposeGraph> keypose_graph_;
   std::shared_ptr<keypose_graph_ns::KeyposeGraph> merged_keypose_graph_;

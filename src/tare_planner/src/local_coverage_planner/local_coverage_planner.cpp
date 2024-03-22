@@ -10,6 +10,7 @@
  */
 
 #include "local_coverage_planner/local_coverage_planner.h"
+#include "tsp_solver/tsp_solver.h"
 
 namespace local_coverage_planner_ns
 {

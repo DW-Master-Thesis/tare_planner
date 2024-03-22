@@ -674,32 +674,29 @@ void GridWorld::UpdateCellStatus(const std::shared_ptr<viewpoint_manager_ns::Vie
   }
 }
 
-exploration_path_ns::ExplorationPath GridWorld::SolveGlobalTSP(
-    const std::shared_ptr<viewpoint_manager_ns::ViewPointManager>& viewpoint_manager,
-    std::vector<int>& ordered_cell_indices, const std::shared_ptr<keypose_graph_ns::KeyposeGraph>& keypose_graph)
+geometry_msgs::msg::Point GridWorld::GetClosestKeyposeGraphNodePosition(
+  geometry_msgs::msg::Point robot_position,
+  const std::shared_ptr<keypose_graph_ns::KeyposeGraph>& keypose_graph,
+    const std::shared_ptr<viewpoint_manager_ns::ViewPointManager>& viewpoint_manager
+)
 {
-  /****** Get the node on keypose graph associated with the robot position *****/
   double min_dist_to_robot = DBL_MAX;
-  geometry_msgs::msg::Point global_path_robot_position = robot_position_;
-  Eigen::Vector3d eigen_robot_position(robot_position_.x, robot_position_.y, robot_position_.z);
+  geometry_msgs::msg::Point global_path_robot_position = robot_position;
+  Eigen::Vector3d eigen_robot_position(robot_position.x, robot_position.y, robot_position.z);
   // Get nearest connected node
   int closest_node_ind = 0;
   double closest_node_dist = DBL_MAX;
-  keypose_graph->GetClosestConnectedNodeIndAndDistance(robot_position_, closest_node_ind, closest_node_dist);
+  keypose_graph->GetClosestConnectedNodeIndAndDistance(robot_position, closest_node_ind, closest_node_dist);
   if (closest_node_dist < kCellSize / 2 && closest_node_ind >= 0 && closest_node_ind < keypose_graph->GetNodeNum())
   {
     global_path_robot_position = keypose_graph->GetNodePosition(closest_node_ind);
   }
   else if (cur_keypose_graph_node_ind_ >= 0 && cur_keypose_graph_node_ind_ < keypose_graph->GetNodeNum())
   {
-    // RCLCPP_WARN(rclcpp::get_logger("standalone_logger"), "GridWorld::SolveGlobalTSP: using nearest keypose node for
-    // robot position");
     global_path_robot_position = keypose_graph->GetNodePosition(cur_keypose_graph_node_ind_);
   }
   else
   {
-    // RCLCPP_WARN(rclcpp::get_logger("standalone_logger"), "GridWorld::SolveGlobalTSP: using neighbor cell roadmap
-    // connection points for robot position");
     for (int i = 0; i < neighbor_cell_indices_.size(); i++)
     {
       int cell_ind = neighbor_cell_indices_[i];
@@ -719,6 +716,27 @@ exploration_path_ns::ExplorationPath GridWorld::SolveGlobalTSP(
         }
       }
     }
+  }
+  return global_path_robot_position;
+};
+
+exploration_path_ns::ExplorationPath GridWorld::SolveGlobalVRP(
+    const std::vector<geometry_msgs::msg::Point>& other_robot_positions,
+    const std::shared_ptr<viewpoint_manager_ns::ViewPointManager>& viewpoint_manager,
+    std::vector<int>& ordered_cell_indices,
+    const std::shared_ptr<keypose_graph_ns::KeyposeGraph>& keypose_graph
+)
+{
+  geometry_msgs::msg::Point global_path_robot_position = GetClosestKeyposeGraphNodePosition(
+    robot_position_, keypose_graph, viewpoint_manager
+  );
+  std::vector<geometry_msgs::msg::Point> other_robot_positions_global;
+  for (const auto& other_robot_position : other_robot_positions)
+  {
+    geometry_msgs::msg::Point other_robot_position_global = GetClosestKeyposeGraphNodePosition(
+      other_robot_position, keypose_graph, viewpoint_manager
+    );
+    other_robot_positions_global.push_back(other_robot_position_global);
   }
 
   /****** Get all the connected exploring cells *****/
@@ -824,59 +842,82 @@ exploration_path_ns::ExplorationPath GridWorld::SolveGlobalTSP(
       {
         // RCLCPP_ERROR(this->get_logger(), "Cannot find path home");
         // TODO: find a path
+        global_path = prev_global_path;
       }
     }
     return global_path;
   }
 
   return_home_ = false;
-
-  // Put the current robot position in the end
-  exploring_cell_positions.push_back(global_path_robot_position);
-  exploring_cell_indices.push_back(-1);
-
   /******* Construct the distance matrix *****/
-  std::vector<std::vector<int>> distance_matrix(exploring_cell_positions.size(),
-                                                std::vector<int>(exploring_cell_positions.size(), 0));
-  for (int i = 0; i < exploring_cell_positions.size(); i++)
+  int num_agents = other_robot_positions_global.size() + 1;
+  int num_nodes = exploring_cell_positions.size();
+  int distance_matrix_size = num_nodes + num_agents + 1; // +1 for depot
+  std::vector<std::vector<int>> distance_matrix(distance_matrix_size, std::vector<int>(distance_matrix_size, 0));
+  std::vector<geometry_msgs::msg::Point> all_positions;
+  all_positions.push_back(global_path_robot_position);
+  for (auto& position : other_robot_positions_global)
+  {
+    all_positions.push_back(position);
+  }
+  for (auto& position : exploring_cell_positions)
+  {
+    all_positions.push_back(position);
+  }
+  geometry_msgs::msg::Point home_position = geometry_msgs::msg::Point();
+  home_position.x = home_position_.x();
+  home_position.y = home_position_.y();
+  home_position.z = home_position_.z();
+
+  for (int i = 0; i < distance_matrix_size - 1; i++)
   {
     for (int j = 0; j < i; j++)
     {
       if (!use_keypose_graph_ || keypose_graph == nullptr || keypose_graph->GetNodeNum() == 0)
       {
         // Use straight line connection
-        distance_matrix[i][j] =
+        distance_matrix[i+1][j+1] =
             static_cast<int>(10 * misc_utils_ns::PointXYZDist<geometry_msgs::msg::Point, geometry_msgs::msg::Point>(
-                                      exploring_cell_positions[i], exploring_cell_positions[j]));
+                                      all_positions[i], all_positions[j]));
       }
       else
       {
         // Use keypose graph
         nav_msgs::msg::Path path_tmp;
-        distance_matrix[i][j] =
-            static_cast<int>(10 * keypose_graph->GetShortestPath(exploring_cell_positions[i],
-                                                                 exploring_cell_positions[j], false, path_tmp, true));
+        distance_matrix[i+1][j+1] =
+            static_cast<int>(10 * keypose_graph->GetShortestPath(all_positions[i],
+                                                                 all_positions[j], false, path_tmp, true));
       }
     }
   }
 
-  for (int i = 0; i < exploring_cell_positions.size(); i++)
+  for (int i = 0; i < distance_matrix_size; i++)
   {
-    for (int j = i + 1; j < exploring_cell_positions.size(); j++)
+    for (int j = i + 1; j < distance_matrix_size; j++)
     {
       distance_matrix[i][j] = distance_matrix[j][i];
     }
   }
 
   /****** Solve the TSP ******/
-  tsp_solver_ns::DataModel data_model;
+  vrp_solver_ns::DataModel data_model;
   data_model.distance_matrix = distance_matrix;
-  data_model.depot = exploring_cell_positions.size() - 1;
+  data_model.num_vehicles = num_agents;
+  std::vector<operations_research::RoutingIndexManager::NodeIndex> starts;
+  std::vector<operations_research::RoutingIndexManager::NodeIndex> ends;
+  for (int i = 0; i < num_agents; i++)
+  {
+    starts.push_back(operations_research::RoutingIndexManager::NodeIndex{i + 1});
+    ends.push_back(operations_research::RoutingIndexManager::NodeIndex{0}); // home position
+  }
+  data_model.starts = starts;
+  data_model.ends = ends;
 
-  tsp_solver_ns::TSPSolver tsp_solver(data_model);
-  tsp_solver.Solve();
+  vrp_solver_ns::VRPSolver vrp_solver(data_model);
+  std::vector<std::vector<int>> solution = vrp_solver.Solve();
+
   std::vector<int> node_index;
-  tsp_solver.getSolutionNodeIndex(node_index, false);
+  node_index = solution[0];
 
   ordered_cell_indices.clear();
 
@@ -886,18 +927,19 @@ exploration_path_ns::ExplorationPath GridWorld::SolveGlobalTSP(
     node_index.push_back(node_index[0]);
   }
 
+  // Extract VRP solution
   if (!use_keypose_graph_ || keypose_graph == nullptr || keypose_graph->GetNodeNum() == 0)
   {
     for (int i = 0; i < node_index.size(); i++)
     {
-      int cell_ind = node_index[i];
+      int cell_ind = node_index[i] - 1;
       geometry_msgs::msg::PoseStamped pose;
-      pose.pose.position = exploring_cell_positions[cell_ind];
-      exploration_path_ns::Node node(exploring_cell_positions[cell_ind],
+      pose.pose.position = all_positions[cell_ind];
+      exploration_path_ns::Node node(all_positions[cell_ind],
                                      exploration_path_ns::NodeType::GLOBAL_VIEWPOINT);
-      node.global_subspace_index_ = exploring_cell_indices[cell_ind];
+      node.global_subspace_index_ = exploring_cell_indices[cell_ind - num_agents];
       global_path.Append(node);
-      ordered_cell_indices.push_back(exploring_cell_indices[cell_ind]);
+      ordered_cell_indices.push_back(exploring_cell_indices[cell_ind - num_agents]);
     }
   }
   else
@@ -911,13 +953,14 @@ exploration_path_ns::ExplorationPath GridWorld::SolveGlobalTSP(
 
     for (int i = 0; i < node_index.size() - 1; i++)
     {
-      cur_ind = node_index[i];
-      next_ind = node_index[i + 1];
-      cur_position = exploring_cell_positions[cur_ind];
-      next_position = exploring_cell_positions[next_ind];
+      cur_ind = node_index[i] - 1;
+      next_ind = node_index[i + 1] - 1;
+      cur_position = all_positions[cur_ind];
+      next_position = all_positions[next_ind];
 
       nav_msgs::msg::Path keypose_path;
       keypose_graph->GetShortestPath(cur_position, next_position, true, keypose_path, true);
+      keypose_path = misc_utils_ns::SimplifyPath(keypose_path);
 
       exploration_path_ns::Node node(Eigen::Vector3d(cur_position.x, cur_position.y, cur_position.z));
       if (i == 0)
@@ -928,15 +971,23 @@ exploration_path_ns::ExplorationPath GridWorld::SolveGlobalTSP(
       {
         node.type_ = exploration_path_ns::NodeType::GLOBAL_VIEWPOINT;
       }
-      node.global_subspace_index_ = exploring_cell_indices[cur_ind];
+      if (cur_ind > num_agents)
+      {
+        node.global_subspace_index_ = exploring_cell_indices[cur_ind - num_agents];
+        ordered_cell_indices.push_back(exploring_cell_indices[cur_ind - num_agents]);
+      }
+      else
+      {
+        node.global_subspace_index_ = -1;
+        ordered_cell_indices.push_back(-1);
+      }
       global_path.Append(node);
 
-      ordered_cell_indices.push_back(exploring_cell_indices[cur_ind]);
 
       // Fill in the path in between
       if (keypose_path.poses.size() >= 2)
       {
-        for (int j = 1; j < keypose_path.poses.size() - 1; j++)
+        for (int j = 1; j < keypose_path.poses.size(); j++)
         {
           geometry_msgs::msg::Point node_position;
           node_position = keypose_path.poses[j].pose.position;
@@ -959,6 +1010,7 @@ exploration_path_ns::ExplorationPath GridWorld::SolveGlobalTSP(
   //   std::cout << ordered_cell_indices[i] << " -> ";
   // }
   // std::cout << std::endl;
+  prev_global_path = global_path;
 
   return global_path;
 }

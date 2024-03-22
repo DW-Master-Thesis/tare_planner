@@ -816,6 +816,7 @@ void SensorCoveragePlanner3D::UpdateMergedPlanningInterface()
   keypose_graph_vis_cloud_->Publish();
 
   // Update grid world with viewpoint_manager
+  other_robot_positions_.clear();
   grid_world_->UpdateCellKeyposeGraphNodes(merged_keypose_graph_);
   for (int i = 0; i < planning_interfaces.size(); i++)
   {
@@ -829,6 +830,7 @@ void SensorCoveragePlanner3D::UpdateMergedPlanningInterface()
     grid_world_->UpdateNeighborCells(published_viewpoint_manager_->GetRobotPosition());
     grid_world_->UpdateCellStatus(published_viewpoint_manager_, true);
     grid_world_->AddPathsInBetweenCells(published_viewpoint_manager_, merged_keypose_graph_);
+    other_robot_positions_.push_back(published_viewpoint_manager_->GetRobotPosition());
   }
   grid_world_->UpdateRobotPosition(robot_position_);
   grid_world_->UpdateNeighborCells(robot_position_);
@@ -837,11 +839,16 @@ void SensorCoveragePlanner3D::UpdateMergedPlanningInterface()
 void SensorCoveragePlanner3D::GlobalPlanning(std::vector<int>& global_cell_tsp_order,
                                              exploration_path_ns::ExplorationPath& global_path)
 {
+  grid_world_->UpdateRobotPosition(robot_position_);
   misc_utils_ns::Timer global_tsp_timer("Global planning");
   global_tsp_timer.Start();
 
-  // global_path = grid_world_->SolveGlobalTSP(viewpoint_manager_, global_cell_tsp_order, keypose_graph_);
-  global_path = grid_world_->SolveGlobalTSP(viewpoint_manager_, global_cell_tsp_order, merged_keypose_graph_);
+  global_path = grid_world_->SolveGlobalVRP(
+    other_robot_positions_,
+    viewpoint_manager_,
+    global_cell_tsp_order,
+    merged_keypose_graph_
+  );
   grid_world_->UpdateCellStatus(viewpoint_manager_);
   grid_world_->AddPathsInBetweenCells(viewpoint_manager_, keypose_graph_);
   viewpoint_manager_->UpdateCandidateViewPointCellStatus(grid_world_);
