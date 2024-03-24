@@ -7,7 +7,7 @@ from launch_ros.actions import Node
 
 def generate_launch_description():
     config_file = get_package_share_directory('tare_planner') + '/planning_interface_merger.yaml'
-    namespace = LaunchConfiguration('default')
+    namespace = LaunchConfiguration('namespace')
 
     declare_namespace = DeclareLaunchArgument(
         'namespace',
@@ -23,5 +23,6 @@ def generate_launch_description():
             name='planning_interface_merger',
             output='screen',
             parameters=[config_file],
+            namespace=namespace,
         ),
     ]) 

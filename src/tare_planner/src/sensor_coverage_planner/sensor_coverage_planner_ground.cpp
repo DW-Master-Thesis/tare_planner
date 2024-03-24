@@ -41,6 +41,7 @@ void SensorCoveragePlanner3D::ReadParameters()
   this->declare_parameter<std::string>("pub_waypoint_topic_", "/way_point");
   this->declare_parameter<std::string>("pub_momentum_activation_count_topic_", "momentum_activation_count");
   this->declare_parameter<std::string>("planning_interface_merge_service_name", "merge_planning_interface");
+  this->declare_parameter<std::string>("kPlanningInterfaceMergerNamespace", "/default/");
 
   // Bool
   this->declare_parameter<bool>("kAutoStart", false);
@@ -177,6 +178,9 @@ void SensorCoveragePlanner3D::ReadParameters()
   this->get_parameter("pub_waypoint_topic_", pub_waypoint_topic_);
   this->get_parameter("pub_momentum_activation_count_topic_", pub_momentum_activation_count_topic_);
   this->get_parameter("planning_interface_merge_service_name", planning_interface_merge_service_name_);
+  std::string kPlanningInterfaceMergerNamespace;
+  this->get_parameter("kPlanningInterfaceMergerNamespace", kPlanningInterfaceMergerNamespace);
+  planning_interface_merge_service_name_ = kPlanningInterfaceMergerNamespace + planning_interface_merge_service_name_;
 
   this->get_parameter("kAutoStart", kAutoStart);
 
@@ -374,6 +378,8 @@ bool SensorCoveragePlanner3D::initialize()
   nogo_boundary_sub_ = this->create_subscription<geometry_msgs::msg::PolygonStamped>(
       sub_nogo_boundary_topic_, 5,
       std::bind(&SensorCoveragePlanner3D::NogoBoundaryCallback, this, std::placeholders::_1));
+  explored_volume_sub_ = this->create_subscription<std_msgs::msg::Float32>(
+      "explored_volume", 5, std::bind(&SensorCoveragePlanner3D::ExploredVolumeCallback, this, std::placeholders::_1));
 
   global_path_full_publisher_ = this->create_publisher<nav_msgs::msg::Path>("global_path_full", 1);
   global_path_publisher_ = this->create_publisher<nav_msgs::msg::Path>("global_path", 1);
@@ -394,6 +400,7 @@ bool SensorCoveragePlanner3D::initialize()
 
   planning_interface_merge_client_ =
       this->create_client<tare_planner_interfaces::srv::MergePlanningInterface>(planning_interface_merge_service_name_);
+  RCLCPP_INFO(this->get_logger(), "MergePlanningInterface service name: %s", planning_interface_merge_client_->get_service_name());
 
   PrintExplorationStatus("Exploration Started", false);
   return true;
@@ -405,6 +412,11 @@ void SensorCoveragePlanner3D::ExplorationStartCallback(const std_msgs::msg::Bool
   {
     start_exploration_ = true;
   }
+}
+
+void SensorCoveragePlanner3D::ExploredVolumeCallback(const std_msgs::msg::Float32::ConstSharedPtr explored_volume_msg)
+{
+  explored_volume_ = explored_volume_msg->data;
 }
 
 void SensorCoveragePlanner3D::StateEstimationCallback(
@@ -1580,7 +1592,8 @@ void SensorCoveragePlanner3D::execute()
       if (!exploration_finished_)
       {
         PrintExplorationStatus("Exploration completed, returning home", false);
-        RCLCPP_INFO(rclcpp::get_logger("standalone_logger"), "Time to complete exploration: %f", delta_time);
+        RCLCPP_INFO(rclcpp::get_logger("standalone_logger"), "(Robot %d) Time to complete exploration: %f", kRobotId, delta_time);
+        RCLCPP_INFO(rclcpp::get_logger("standalone_logger"), "(Robot %d) Explored volume: %f", kRobotId, explored_volume_);
       }
       exploration_finished_ = true;
     }

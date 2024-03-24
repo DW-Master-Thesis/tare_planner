@@ -747,7 +747,7 @@ exploration_path_ns::ExplorationPath GridWorld::SolveGlobalVRP(
   {
     if (subspaces_->GetCell(i).GetStatus() == CellStatus::EXPLORING)
     {
-      if (std::find(neighbor_cell_indices_.begin(), neighbor_cell_indices_.end(), i) == neighbor_cell_indices_.end())
+      // if (std::find(neighbor_cell_indices_.begin(), neighbor_cell_indices_.end(), i) == neighbor_cell_indices_.end())
       {
         if (!use_keypose_graph_ || keypose_graph == nullptr || keypose_graph->GetNodeNum() == 0)
         {

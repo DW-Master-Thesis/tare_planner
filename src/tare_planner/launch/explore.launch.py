@@ -7,10 +7,10 @@ from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch_ros.actions import Node
 
 
-def launch_tare_node(context, worldName, robotName, rviz):
+def launch_tare_node(context, worldName, namespace, robotName, rviz):
     world_name_str = str(worldName.perform(context))
     robot_name_str = str(robotName.perform(context))
-    namespace = robot_name_str
+    namespace = str(namespace.perform(context))
     robot_id = int(robot_name_str.split('_')[-1])
     tare_planner_node = Node(
         package='tare_planner',
@@ -19,9 +19,9 @@ def launch_tare_node(context, worldName, robotName, rviz):
         output='screen',
         parameters=[
           get_package_share_directory('tare_planner') + "/" + world_name_str + '.yaml',
-        {"kRobotId": int(robot_id)},
+        {"kRobotId": int(robot_id), "kPlanningInterfaceMergerNamespace": '/' + namespace + '/'},
         ],
-        namespace=namespace,
+        namespace=namespace + '/' + robot_name_str,
     )
     rviz_node = Node(
         package='rviz2',
@@ -29,7 +29,7 @@ def launch_tare_node(context, worldName, robotName, rviz):
         name='tare_planner_ground_rviz',
         arguments=[
             '-d', get_package_share_directory('tare_planner')+'/tare_planner_ground.rviz'],
-        namespace=namespace,
+        namespace=namespace + '/' + robot_name_str,
         condition=IfCondition(rviz),
     )
     return [rviz_node, tare_planner_node]
@@ -38,6 +38,7 @@ def launch_tare_node(context, worldName, robotName, rviz):
 def generate_launch_description():
 
     useSimTime = LaunchConfiguration('useSimTime')
+    namespace = LaunchConfiguration('namespace')
     robotName = LaunchConfiguration('robotName')
     worldName = LaunchConfiguration('worldName')
     rviz = LaunchConfiguration('rviz')
@@ -52,6 +53,11 @@ def generate_launch_description():
         'worldName',
         default_value='indoor',
         description='',
+    )
+    declare_namespace = DeclareLaunchArgument(
+        'namespace',
+        default_value='default',
+        description='Namespace for the node',
     )
     declare_robotName = DeclareLaunchArgument(
         'robotName',
@@ -74,6 +80,7 @@ def generate_launch_description():
         declare_worldName,
         declare_rviz,
         declare_useBoundary,
+        declare_namespace,
         declare_robotName,
-        OpaqueFunction(function=launch_tare_node, args=[worldName, robotName,  rviz])
+        OpaqueFunction(function=launch_tare_node, args=[worldName, namespace, robotName,  rviz])
     ])
