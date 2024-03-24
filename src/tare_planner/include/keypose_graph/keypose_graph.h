@@ -172,6 +172,10 @@ public:
   {
     return kAddNonKeyposeNodeMinDist;
   }
+  double GetAddNonKeyposeNodeMinDist()
+  {
+    return kAddNonKeyposeNodeMinDist;
+  }
   double& SetAddEdgeCollisionCheckResolution()
   {
     return kAddEdgeCollisionCheckResolution;

@@ -152,30 +152,7 @@ void TAREVisualizer::GetGlobalSubspaceMarker(const std::shared_ptr<grid_world_ns
 {
   global_subspaces_marker_->marker_.points.clear();
   global_subspaces_marker_->marker_.colors.clear();
-  int cell_num = ordered_cell_indices.size();
-  for (int i = 0; i < cell_num; i++)
-  {
-    int cell_ind = ordered_cell_indices[i];
-    if (!grid_world->IndInBound(cell_ind))
-    {
-      continue;
-    }
-    geometry_msgs::msg::Point cell_center = grid_world->GetCellPosition(cell_ind);
-    std_msgs::msg::ColorRGBA color;
-    color.r = 0.0;
-    color.g = 1.0;
-    color.b = 0.0;
-    if (kExploringSubspaceMarkerColorGradientAlpha)
-    {
-      color.a = ((cell_num - i) * 1.0 / cell_num) * kExploringSubspaceMarkerColorMaxAlpha;
-    }
-    else
-    {
-      color.a = 1.0;
-    }
-    global_subspaces_marker_->marker_.points.push_back(cell_center);
-    global_subspaces_marker_->marker_.colors.push_back(color);
-  }
+  grid_world->GetMarker(global_subspaces_marker_->marker_);
 }
 
 void TAREVisualizer::PublishMarkers()

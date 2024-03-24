@@ -319,7 +319,7 @@ void GridWorld::GetMarker(visualization_msgs::msg::Marker& marker)
         int cell_ind = subspaces_->Sub2Ind(i, j, k);
         geometry_msgs::msg::Point cell_center = subspaces_->GetCell(cell_ind).GetPosition();
         std_msgs::msg::ColorRGBA color;
-        bool add_marker = false;
+        bool add_marker = true;
         if (subspaces_->GetCell(cell_ind).GetStatus() == CellStatus::UNSEEN)
         {
           color.r = 0.0;
@@ -327,6 +327,7 @@ void GridWorld::GetMarker(visualization_msgs::msg::Marker& marker)
           color.b = 1.0;
           color.a = 0.1;
           unseen_count++;
+          add_marker = false;
         }
         else if (subspaces_->GetCell(cell_ind).GetStatus() == CellStatus::COVERED)
         {
@@ -634,26 +635,26 @@ void GridWorld::UpdateCellStatus(const std::shared_ptr<viewpoint_manager_ns::Vie
           std::remove(almost_covered_cell_indices_.begin(), almost_covered_cell_indices_.end(), cell_ind),
           almost_covered_cell_indices_.end());
     }
-    else if (subspaces_->GetCell(cell_ind).GetStatus() == CellStatus::EXPLORING && candidate_count == 0)
-    {
-      // First visit
-      if (subspaces_->GetCell(cell_ind).GetVisitCount() == 1 &&
-          subspaces_->GetCell(cell_ind).GetGraphNodeIndices().empty())
-      {
-        subspaces_->GetCell(cell_ind).SetStatus(CellStatus::COVERED);
-      }
-      else
-      {
-        geometry_msgs::msg::Point cell_position = subspaces_->GetCell(cell_ind).GetPosition();
-        double xy_dist_to_robot = misc_utils_ns::PointXYDist<geometry_msgs::msg::Point, geometry_msgs::msg::Point>(
-            cell_position, robot_position_);
-        double z_dist_to_robot = std::abs(cell_position.z - robot_position_.z);
-        if (xy_dist_to_robot < kCellSize && z_dist_to_robot < kCellHeight * 0.8)
-        {
-          subspaces_->GetCell(cell_ind).SetStatus(CellStatus::COVERED);
-        }
-      }
-    }
+    // else if (subspaces_->GetCell(cell_ind).GetStatus() == CellStatus::EXPLORING && candidate_count == 0)
+    // {
+    //   // First visit
+    //   if (subspaces_->GetCell(cell_ind).GetVisitCount() == 1 &&
+    //       subspaces_->GetCell(cell_ind).GetGraphNodeIndices().empty())
+    //   {
+    //     subspaces_->GetCell(cell_ind).SetStatus(CellStatus::COVERED);
+    //   }
+    //   else
+    //   {
+    //     geometry_msgs::msg::Point cell_position = subspaces_->GetCell(cell_ind).GetPosition();
+    //     double xy_dist_to_robot = misc_utils_ns::PointXYDist<geometry_msgs::msg::Point, geometry_msgs::msg::Point>(
+    //         cell_position, robot_position_);
+    //     double z_dist_to_robot = std::abs(cell_position.z - robot_position_.z);
+    //     if (xy_dist_to_robot < kCellSize && z_dist_to_robot < kCellHeight * 0.8)
+    //     {
+    //       subspaces_->GetCell(cell_ind).SetStatus(CellStatus::COVERED);
+    //     }
+    //   }
+    // }
 
     if (subspaces_->GetCell(cell_ind).GetStatus() == CellStatus::EXPLORING && candidate_count > 0)
     {
