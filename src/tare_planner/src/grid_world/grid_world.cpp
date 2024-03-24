@@ -919,6 +919,16 @@ exploration_path_ns::ExplorationPath GridWorld::SolveGlobalVRP(
 
   std::vector<int> node_index;
   node_index = solution[0];
+  if (node_index.size() <= 1)
+  {
+    for (int i = 1; i < num_agents; i++)
+    {
+      for (int j = 0; j < solution[i].size() - 1; j++)
+      {
+        node_index.push_back(solution[i][j]);
+      }
+    }
+  }
 
   ordered_cell_indices.clear();
 
