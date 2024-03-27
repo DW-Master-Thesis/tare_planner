@@ -855,20 +855,21 @@ void SensorCoveragePlanner3D::GlobalPlanning(std::vector<int>& global_cell_tsp_o
   misc_utils_ns::Timer global_tsp_timer("Global planning");
   global_tsp_timer.Start();
 
-  std::shared_ptr<keypose_graph_ns::KeyposeGraph> global_planning_keypose_graph_ = 
-    std::make_shared<keypose_graph_ns::KeyposeGraph>(
-      keypose_graph_ns::KeyposeGraph::copy(shared_from_this(), *merged_keypose_graph_)
-    );
-  global_planning_keypose_graph_->SetAllowVerticalEdge(false);
-  global_planning_keypose_graph_->SetAddNonKeyposeNodeMinDist() = merged_keypose_graph_->GetAddNonKeyposeNodeMinDist();
-  global_planning_keypose_graph_ = std::make_shared<keypose_graph_ns::KeyposeGraph>(
-    keypose_graph_ns::KeyposeGraph::merge(shared_from_this(), *global_planning_keypose_graph_, *keypose_graph_)
-  );
+  // std::shared_ptr<keypose_graph_ns::KeyposeGraph> global_planning_keypose_graph_ = 
+  //   std::make_shared<keypose_graph_ns::KeyposeGraph>(
+  //     keypose_graph_ns::KeyposeGraph::copy(shared_from_this(), *merged_keypose_graph_)
+  //   );
+  // global_planning_keypose_graph_->SetAllowVerticalEdge(false);
+  // global_planning_keypose_graph_->SetAddNonKeyposeNodeMinDist() = merged_keypose_graph_->GetAddNonKeyposeNodeMinDist();
+  // global_planning_keypose_graph_ = std::make_shared<keypose_graph_ns::KeyposeGraph>(
+  //   keypose_graph_ns::KeyposeGraph::merge(shared_from_this(), *global_planning_keypose_graph_, *keypose_graph_)
+  // );
+  grid_world_->AddPathsInBetweenCells(viewpoint_manager_, merged_keypose_graph_);
   global_path = grid_world_->SolveGlobalVRP(
     other_robot_positions_,
     viewpoint_manager_,
     global_cell_tsp_order,
-    global_planning_keypose_graph_
+    merged_keypose_graph_
   );
   grid_world_->UpdateCellStatus(viewpoint_manager_);
   grid_world_->AddPathsInBetweenCells(viewpoint_manager_, keypose_graph_);

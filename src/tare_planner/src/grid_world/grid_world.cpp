@@ -569,6 +569,7 @@ void GridWorld::UpdateCellStatus(const std::shared_ptr<viewpoint_manager_ns::Vie
     int above_big_threshold_count = 0;
     int above_small_threshold_count = 0;
     int above_frontier_threshold_count = 0;
+    bool not_visited = true;
     for (const auto& viewpoint_ind : subspaces_->GetCell(cell_ind).GetViewPointIndices())
     {
       MY_ASSERT(viewpoint_manager->IsViewPointCandidate(viewpoint_ind));
@@ -579,6 +580,7 @@ void GridWorld::UpdateCellStatus(const std::shared_ptr<viewpoint_manager_ns::Vie
       }
       if (viewpoint_manager->ViewPointVisited(viewpoint_ind))
       {
+        not_visited = false;
         continue;
       }
       int score = viewpoint_manager->GetViewPointCoveredPointNum(viewpoint_ind);
@@ -628,7 +630,7 @@ void GridWorld::UpdateCellStatus(const std::shared_ptr<viewpoint_manager_ns::Vie
       almost_covered_cell_indices_.push_back(cell_ind);
     }
     // Any status other than COVERED to Explorting
-    else if (subspaces_->GetCell(cell_ind).GetStatus() != CellStatus::COVERED && selected_viewpoint_count > 0)
+    else if (subspaces_->GetCell(cell_ind).GetStatus() != CellStatus::COVERED && selected_viewpoint_count > 0 && not_visited)
     {
       subspaces_->GetCell(cell_ind).SetStatus(CellStatus::EXPLORING);
       almost_covered_cell_indices_.erase(
