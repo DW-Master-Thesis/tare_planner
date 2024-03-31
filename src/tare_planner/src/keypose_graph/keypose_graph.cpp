@@ -672,6 +672,7 @@ void KeyposeGraph::CheckConnectivity(const geometry_msgs::msg::Point& robot_posi
   int robot_node_ind = -1;
   double robot_node_dist = DBL_MAX;
   GetClosestNodeIndAndDistance(robot_position, robot_node_ind, robot_node_dist);
+  AddNodeAndEdge(robot_position, nodes_.size(), current_keypose_id_, false, robot_node_ind, robot_node_dist);
   if (robot_node_ind >= 0 && robot_node_ind < nodes_.size())
   {
     nodes_[robot_node_ind].is_connected_ = true;

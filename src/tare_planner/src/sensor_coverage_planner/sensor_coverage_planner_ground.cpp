@@ -798,17 +798,17 @@ void SensorCoveragePlanner3D::UpdateMergedPlanningInterface()
   auto robot_ids = merged_planning_interface_response_->robot_ids;
 
   // merge keypose graph
-  keypose_graph_ns::KeyposeGraph other_keypose_graph(shared_from_this());
+  Eigen::Vector3d viewpoint_resolution = viewpoint_manager_->GetResolution();
+  double add_non_keypose_node_min_dist = std::min(viewpoint_resolution.x(), viewpoint_resolution.y()) / 2;
   merged_keypose_graph_ = std::make_shared<keypose_graph_ns::KeyposeGraph>(shared_from_this());
   merged_keypose_graph_->SetAllowVerticalEdge(false);
-  Eigen::Vector3d viewpoint_resolution = viewpoint_manager_->GetResolution();
-  // double add_non_keypose_node_min_dist = grid_world_->GetCellSize();
-  double add_non_keypose_node_min_dist = std::min(viewpoint_resolution.x(), viewpoint_resolution.y()) / 2;
   merged_keypose_graph_->SetAddNonKeyposeNodeMinDist() = add_non_keypose_node_min_dist;
-  other_keypose_graph.SetAddNonKeyposeNodeMinDist() = add_non_keypose_node_min_dist;
   merged_keypose_graph_ = std::make_shared<keypose_graph_ns::KeyposeGraph>(
-    keypose_graph_ns::KeyposeGraph::copy(shared_from_this(), *keypose_graph_)
+    keypose_graph_ns::KeyposeGraph::merge(shared_from_this(), *merged_keypose_graph_, *keypose_graph_)
   );
+  keypose_graph_ns::KeyposeGraph other_keypose_graph(shared_from_this());
+  other_keypose_graph.SetAllowVerticalEdge(false);
+  other_keypose_graph.SetAddNonKeyposeNodeMinDist() = add_non_keypose_node_min_dist;
   for (int i = 0; i < planning_interfaces.size(); i++)
   {
     if (robot_ids[i] == kRobotId)
@@ -820,12 +820,6 @@ void SensorCoveragePlanner3D::UpdateMergedPlanningInterface()
       keypose_graph_ns::KeyposeGraph::merge(shared_from_this(), *merged_keypose_graph_, other_keypose_graph)
     );
   }
-  // Visualize
-  merged_keypose_graph_->GetMarker(keypose_graph_node_marker_->marker_, keypose_graph_edge_marker_->marker_);
-  keypose_graph_edge_marker_->Publish();
-  keypose_graph_vis_cloud_->cloud_->clear();
-  merged_keypose_graph_->GetVisualizationCloud(keypose_graph_vis_cloud_->cloud_);
-  keypose_graph_vis_cloud_->Publish();
 
   // Update grid world with viewpoint_manager
   other_robot_positions_.clear();
@@ -851,19 +845,13 @@ void SensorCoveragePlanner3D::UpdateMergedPlanningInterface()
 void SensorCoveragePlanner3D::GlobalPlanning(std::vector<int>& global_cell_tsp_order,
                                              exploration_path_ns::ExplorationPath& global_path)
 {
+  // RCLCPP_INFO(this->get_logger(), "Global planning started");
   grid_world_->UpdateRobotPosition(robot_position_);
   misc_utils_ns::Timer global_tsp_timer("Global planning");
   global_tsp_timer.Start();
 
-  // std::shared_ptr<keypose_graph_ns::KeyposeGraph> global_planning_keypose_graph_ = 
-  //   std::make_shared<keypose_graph_ns::KeyposeGraph>(
-  //     keypose_graph_ns::KeyposeGraph::copy(shared_from_this(), *merged_keypose_graph_)
-  //   );
-  // global_planning_keypose_graph_->SetAllowVerticalEdge(false);
-  // global_planning_keypose_graph_->SetAddNonKeyposeNodeMinDist() = merged_keypose_graph_->GetAddNonKeyposeNodeMinDist();
-  // global_planning_keypose_graph_ = std::make_shared<keypose_graph_ns::KeyposeGraph>(
-  //   keypose_graph_ns::KeyposeGraph::merge(shared_from_this(), *global_planning_keypose_graph_, *keypose_graph_)
-  // );
+  merged_keypose_graph_->CheckConnectivity(robot_position_);
+  grid_world_->UpdateCellKeyposeGraphNodes(merged_keypose_graph_);
   grid_world_->AddPathsInBetweenCells(viewpoint_manager_, merged_keypose_graph_);
   global_path = grid_world_->SolveGlobalVRP(
     other_robot_positions_,
@@ -877,11 +865,19 @@ void SensorCoveragePlanner3D::GlobalPlanning(std::vector<int>& global_cell_tsp_o
 
   global_tsp_timer.Stop(false);
   global_planning_runtime_ = global_tsp_timer.GetDuration("ms");
+  // RCLCPP_INFO(this->get_logger(), "Global planning finished");
 }
 
 void SensorCoveragePlanner3D::PublishGlobalPlanningVisualization(
     const exploration_path_ns::ExplorationPath& global_path, const exploration_path_ns::ExplorationPath& local_path)
 {
+  // Visualize keypose graph
+  merged_keypose_graph_->GetMarker(keypose_graph_node_marker_->marker_, keypose_graph_edge_marker_->marker_);
+  keypose_graph_edge_marker_->Publish();
+  keypose_graph_vis_cloud_->cloud_->clear();
+  merged_keypose_graph_->GetVisualizationCloud(keypose_graph_vis_cloud_->cloud_);
+  keypose_graph_vis_cloud_->Publish();
+
   nav_msgs::msg::Path global_path_full = global_path.GetPath();
   global_path_full.header.frame_id = "map";
   global_path_full.header.stamp = this->now();
@@ -1578,7 +1574,7 @@ void SensorCoveragePlanner3D::execute()
   if (planning_interface_response_received_)
   {
     UpdateMergedPlanningInterface();
-      planning_interface_response_received_ = false;
+    planning_interface_response_received_ = false;
   }
 
   if (planning_interface_update_)

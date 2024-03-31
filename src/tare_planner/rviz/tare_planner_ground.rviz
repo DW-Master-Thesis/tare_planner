@@ -9,6 +9,7 @@ Panels:
         - /Global1/GlobalPath1
         - /Local1
         - /Local1/Odometry1/Shape1
+        - /TF1
       Splitter Ratio: 0.6470588445663452
     Tree Height: 877
   - Class: rviz_common/Selection
@@ -617,6 +618,36 @@ Visualization Manager:
           Value: true
       Enabled: true
       Name: Local
+    - Class: rviz_default_plugins/TF
+      Enabled: true
+      Frame Timeout: 15
+      Frames:
+        All Enabled: true
+        a/robot_0:
+          Value: true
+        a/robot_1:
+          Value: true
+        lidar:
+          Value: true
+        map:
+          Value: true
+        velodyne:
+          Value: true
+        velodyne_base_link:
+          Value: true
+      Marker Scale: 10
+      Name: TF
+      Show Arrows: true
+      Show Axes: true
+      Show Names: false
+      Tree:
+        map:
+          a/robot_0:
+            {}
+          a/robot_1:
+            {}
+      Update Interval: 0
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 0; 0; 0

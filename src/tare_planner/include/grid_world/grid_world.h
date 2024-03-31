@@ -44,6 +44,14 @@ enum class CellStatus
   NOGO = 4
 };
 
+enum class ExploringStatus
+{
+  InGlobalPlan = 0,
+  InOtherGlobalPlan = 1,
+  NextInGlobalPlan = 2,
+  NotInGlobalPlan = 3
+};
+
 class Cell
 {
 public:
@@ -76,13 +84,29 @@ public:
   {
     connected_cell_indices_.clear();
   }
+  void RemoveCellConnection(int cell_ind)
+  {
+    std::vector<int>::iterator it = std::find(connected_cell_indices_.begin(), connected_cell_indices_.end(), cell_ind);
+    if (it != connected_cell_indices_.end())
+    {
+      connected_cell_indices_.erase(it);
+    }
+  }
   CellStatus GetStatus()
   {
     return status_;
   }
+  ExploringStatus GetExploringStatus()
+  {
+    return exploring_status_;
+  }
   void SetStatus(CellStatus status)
   {
     status_ = status;
+  }
+  void SetExploringStatus(ExploringStatus status)
+  {
+    exploring_status_ = status;
   }
   std::vector<int> GetViewPointIndices()
   {
@@ -175,15 +199,25 @@ public:
   {
     roadmap_connection_point_set_ = set;
   }
+  void SetHasRobot(bool has_robot)
+  {
+    has_robot_ = has_robot;
+  }
+  bool HasRobot()
+  {
+    return has_robot_;
+  }
 
 private:
   CellStatus status_;
+  ExploringStatus exploring_status_;
   // The center location of this cell.
   geometry_msgs::msg::Point center_;
   // Position of the robot where this cell is first observed and turned EXPLORING
   geometry_msgs::msg::Point robot_position_;
   // Whether the robot position has been set for this cell
   bool robot_position_set_;
+  bool has_robot_;
   // Number of times the cell is visited by the robot
   int visit_count_;
   // Indices of the viewpoints within this cell.
@@ -279,6 +313,7 @@ public:
   Eigen::Vector3i GetCellSub(const Eigen::Vector3d& point);
   // Get the visualization markers for Rviz display.
   void GetMarker(visualization_msgs::msg::Marker& marker);
+  void GetConnectedCellMarker(visualization_msgs::msg::Marker& marker);
   // Get the visualization pointcloud for debugging purpose
   void GetVisualizationCloud(pcl::PointCloud<pcl::PointXYZI>::Ptr& vis_cloud);
 
@@ -307,6 +342,13 @@ public:
                               std::vector<int>& neighbor_indices);
   void GetNeighborCellIndices(const geometry_msgs::msg::Point& position, const Eigen::Vector3i& neighbor_range,
                               std::vector<int>& neighbor_indices);
+  void GetDistanceAndPathBetweenCells(
+    int from_cell_ind,
+    int to_cell_ind,
+    double& distance,
+    nav_msgs::msg::Path& path,
+    const std::shared_ptr<keypose_graph_ns::KeyposeGraph>& keypose_graph
+  );
   void GetExploringCellIndices(std::vector<int>& exploring_cell_indices);
   CellStatus GetCellStatus(int cell_ind);
   void SetCellStatus(int cell_ind, CellStatus status);
@@ -319,11 +361,7 @@ public:
   void Reset();
   int GetCellStatusCount(grid_world_ns::CellStatus status);
   void UpdateCellStatus(const std::shared_ptr<viewpoint_manager_ns::ViewPointManager>& viewpoint_manager, bool others=false);
-  geometry_msgs::msg::Point GetClosestKeyposeGraphNodePosition(
-    geometry_msgs::msg::Point other_robot_position,
-    const std::shared_ptr<keypose_graph_ns::KeyposeGraph>& keypose_graph,
-    const std::shared_ptr<viewpoint_manager_ns::ViewPointManager>& viewpoint_manager
-  );
+  geometry_msgs::msg::Point GetCellCenterFromPosition(const geometry_msgs::msg::Point& position);
   exploration_path_ns::ExplorationPath SolveGlobalVRP(
     const std::vector<geometry_msgs::msg::Point>& robot_positions,
     const std::shared_ptr<viewpoint_manager_ns::ViewPointManager>& viewpoint_manager,
@@ -394,8 +432,6 @@ private:
   geometry_msgs::msg::Point origin_;
   std::vector<int> neighbor_cell_indices_;
   std::vector<int> almost_covered_cell_indices_;
-  std::vector<std::pair<int, int>> to_connect_cell_indices_;
-  std::vector<nav_msgs::msg::Path> to_connect_cell_paths_;
   Eigen::Vector3d home_position_;
   Eigen::Vector3d cur_keypose_;
   bool set_home_;
@@ -404,6 +440,5 @@ private:
   int cur_keypose_graph_node_ind_;
   int cur_robot_cell_ind_;
   int prev_robot_cell_ind_;
-  exploration_path_ns::ExplorationPath prev_global_path;
 };
 }  // namespace grid_world_ns
