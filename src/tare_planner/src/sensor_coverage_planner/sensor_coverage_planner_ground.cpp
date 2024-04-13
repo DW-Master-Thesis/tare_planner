@@ -41,7 +41,7 @@ void SensorCoveragePlanner3D::ReadParameters()
   this->declare_parameter<std::string>("pub_waypoint_topic_", "/way_point");
   this->declare_parameter<std::string>("pub_momentum_activation_count_topic_", "momentum_activation_count");
   this->declare_parameter<std::string>("planning_interface_merge_service_name", "merge_planning_interface");
-  this->declare_parameter<std::string>("kPlanningInterfaceMergerNamespace", "/default/");
+  this->declare_parameter<std::string>("global_namespace", "/default/");
 
   // Bool
   this->declare_parameter<bool>("kAutoStart", false);
@@ -178,9 +178,8 @@ void SensorCoveragePlanner3D::ReadParameters()
   this->get_parameter("pub_waypoint_topic_", pub_waypoint_topic_);
   this->get_parameter("pub_momentum_activation_count_topic_", pub_momentum_activation_count_topic_);
   this->get_parameter("planning_interface_merge_service_name", planning_interface_merge_service_name_);
-  std::string kPlanningInterfaceMergerNamespace;
-  this->get_parameter("kPlanningInterfaceMergerNamespace", kPlanningInterfaceMergerNamespace);
-  planning_interface_merge_service_name_ = kPlanningInterfaceMergerNamespace + planning_interface_merge_service_name_;
+  this->get_parameter("global_namespace", global_namespace_);
+  planning_interface_merge_service_name_ = global_namespace_ + planning_interface_merge_service_name_;
 
   this->get_parameter("kAutoStart", kAutoStart);
 
@@ -380,6 +379,8 @@ bool SensorCoveragePlanner3D::initialize()
       std::bind(&SensorCoveragePlanner3D::NogoBoundaryCallback, this, std::placeholders::_1));
   explored_volume_sub_ = this->create_subscription<std_msgs::msg::Float32>(
       "explored_volume", 5, std::bind(&SensorCoveragePlanner3D::ExploredVolumeCallback, this, std::placeholders::_1));
+  global_explored_volume_sub_ = this->create_subscription<std_msgs::msg::Float32>(
+      global_namespace_ + "explored_volume", 5, std::bind(&SensorCoveragePlanner3D::GlobalExploredVolumeCallback, this, std::placeholders::_1));
 
   global_path_full_publisher_ = this->create_publisher<nav_msgs::msg::Path>("global_path_full", 1);
   global_path_publisher_ = this->create_publisher<nav_msgs::msg::Path>("global_path", 1);
@@ -417,6 +418,11 @@ void SensorCoveragePlanner3D::ExplorationStartCallback(const std_msgs::msg::Bool
 void SensorCoveragePlanner3D::ExploredVolumeCallback(const std_msgs::msg::Float32::ConstSharedPtr explored_volume_msg)
 {
   explored_volume_ = explored_volume_msg->data;
+}
+
+void SensorCoveragePlanner3D::GlobalExploredVolumeCallback(const std_msgs::msg::Float32::ConstSharedPtr explored_volume_msg)
+{
+  global_explored_volume_ = explored_volume_msg->data;
 }
 
 void SensorCoveragePlanner3D::StateEstimationCallback(
@@ -850,6 +856,7 @@ void SensorCoveragePlanner3D::GlobalPlanning(std::vector<int>& global_cell_tsp_o
   misc_utils_ns::Timer global_tsp_timer("Global planning");
   global_tsp_timer.Start();
 
+  merged_keypose_graph_->CheckLocalCollision(robot_position_, viewpoint_manager_);
   merged_keypose_graph_->CheckConnectivity(robot_position_);
   grid_world_->UpdateCellKeyposeGraphNodes(merged_keypose_graph_);
   grid_world_->AddPathsInBetweenCells(viewpoint_manager_, merged_keypose_graph_);
@@ -1639,5 +1646,10 @@ void SensorCoveragePlanner3D::execute()
     PublishGlobalPlanningVisualization(global_path, local_path);
     PublishRuntime();
   }
+
+  double current_time = this->now().seconds();
+  double delta_time = current_time - start_time_;
+  RCLCPP_INFO(rclcpp::get_logger("EXPLORATION VOLUME"), "[Robot %d] %f: %f", kRobotId, delta_time, explored_volume_);
+  RCLCPP_INFO(rclcpp::get_logger("EXPLORATION VOLUME"), "[Global] %f: %f", delta_time, global_explored_volume_);
 }
 }  // namespace sensor_coverage_planner_3d_ns

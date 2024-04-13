@@ -13,6 +13,7 @@ PlanningInterfaceMerger::PlanningInterfaceMerger() : Node("planning_interface_me
 
   RCLCPP_INFO(this->get_logger(), "Number of robots: %d", numRobots);
   RCLCPP_INFO(this->get_logger(), "Merge service name: %s", mergeServiceName.c_str());
+  RCLCPP_INFO(this->get_logger(), "delayInSeconds: %d", delayInSeconds);
 }
 
 bool PlanningInterfaceMerger::initialize()
