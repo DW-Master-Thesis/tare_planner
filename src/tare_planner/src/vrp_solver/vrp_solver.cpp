@@ -25,11 +25,13 @@ std::vector<std::vector<int>> VRPSolver::Solve()
 {
   // Set solver parameter
   RoutingSearchParameters search_parameters = DefaultRoutingSearchParameters();
-  search_parameters.set_first_solution_strategy(FirstSolutionStrategy::PATH_CHEAPEST_ARC);
+  search_parameters.set_first_solution_strategy(FirstSolutionStrategy::PARALLEL_CHEAPEST_INSERTION);
+  search_parameters.set_local_search_metaheuristic(LocalSearchMetaheuristic::GREEDY_DESCENT);
+  search_parameters.mutable_time_limit()->set_nanos(80000000);
 
   const Assignment* solution = routing_->SolveWithParameters(search_parameters);
   std::vector<std::vector<int>> routes;
-  for (int vehicle_id = 0; vehicle_id < data_.num_vehicles; ++vehicle_id)
+  for (int vehicle_id = 0; vehicle_id < data_.num_vehicles; vehicle_id++)
   {
     std::vector<int> route;
     for (int64_t node = routing_->Start(vehicle_id); !routing_->IsEnd(node); node = solution->Value(routing_->NextVar(node)))

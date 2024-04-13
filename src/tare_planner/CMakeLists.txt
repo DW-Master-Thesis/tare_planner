@@ -75,7 +75,7 @@ ament_target_dependencies(tsp_solver rclcpp std_msgs nav_msgs geometry_msgs sens
 target_link_libraries(tsp_solver ${catkin_LIBRARIES} ${CMAKE_CURRENT_SOURCE_DIR}/or-tools/lib/libortools.so ${CMAKE_CURRENT_SOURCE_DIR}/or-tools/lib/libglog.so)
 
 add_library(vrp_solver src/vrp_solver/vrp_solver.cpp)
-target_link_libraries(vrp_solver ${catkin_LIBRARIES} ${CMAKE_CURRENT_SOURCE_DIR}/or-tools/lib/libortools.so ${CMAKE_CURRENT_SOURCE_DIR}/or-tools/lib/libglog.so)
+target_link_libraries(vrp_solver ${catkin_LIBRARIES} ${CMAKE_CURRENT_SOURCE_DIR}/or-tools/lib/libortools.so ${CMAKE_CURRENT_SOURCE_DIR}/or-tools/lib/libglog.so ${CMAKE_CURRENT_SOURCE_DIR}/or-tools/lib/libprotobuf.so)
 
 add_library(viewpoint src/viewpoint/viewpoint.cpp)
 ament_target_dependencies(viewpoint rclcpp std_msgs nav_msgs geometry_msgs sensor_msgs tf2_ros tf2_geometry_msgs tf2 tare_planner_interfaces)
