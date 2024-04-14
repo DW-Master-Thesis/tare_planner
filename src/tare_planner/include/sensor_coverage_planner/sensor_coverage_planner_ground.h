@@ -294,6 +294,7 @@ private:
 
   double start_time_;
   double global_direction_switch_time_;
+  double explored_volume_;
 
   rclcpp::TimerBase::SharedPtr execution_timer_;
 
@@ -306,6 +307,7 @@ private:
   rclcpp::Subscription<geometry_msgs::msg::PolygonStamped>::SharedPtr coverage_boundary_sub_;
   rclcpp::Subscription<geometry_msgs::msg::PolygonStamped>::SharedPtr viewpoint_boundary_sub_;
   rclcpp::Subscription<geometry_msgs::msg::PolygonStamped>::SharedPtr nogo_boundary_sub_;
+  rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr explored_volume_sub_;
 
   // ROS publishers
   rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr global_path_full_publisher_;
@@ -334,6 +336,7 @@ private:
   void CoverageBoundaryCallback(const geometry_msgs::msg::PolygonStamped::ConstSharedPtr polygon_msg);
   void ViewPointBoundaryCallback(const geometry_msgs::msg::PolygonStamped::ConstSharedPtr polygon_msg);
   void NogoBoundaryCallback(const geometry_msgs::msg::PolygonStamped::ConstSharedPtr polygon_msg);
+  void ExploredVolumeCallback(const std_msgs::msg::Float32::ConstSharedPtr explored_volume_msg);
 
   void SendInitialWaypoint();
   void UpdateKeyposeGraph();

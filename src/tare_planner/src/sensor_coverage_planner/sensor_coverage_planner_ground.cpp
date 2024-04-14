@@ -359,6 +359,8 @@ bool SensorCoveragePlanner3D::initialize()
   viewpoint_boundary_sub_ = this->create_subscription<geometry_msgs::msg::PolygonStamped>(
       sub_viewpoint_boundary_topic_, 5,
       std::bind(&SensorCoveragePlanner3D::ViewPointBoundaryCallback, this, std::placeholders::_1));
+  explored_volume_sub_ = this->create_subscription<std_msgs::msg::Float32>(
+      "explored_volume", 5, std::bind(&SensorCoveragePlanner3D::ExploredVolumeCallback, this, std::placeholders::_1));
   nogo_boundary_sub_ = this->create_subscription<geometry_msgs::msg::PolygonStamped>(
       sub_nogo_boundary_topic_, 5,
       std::bind(&SensorCoveragePlanner3D::NogoBoundaryCallback, this, std::placeholders::_1));
@@ -390,6 +392,11 @@ void SensorCoveragePlanner3D::ExplorationStartCallback(const std_msgs::msg::Bool
   {
     start_exploration_ = true;
   }
+}
+
+void SensorCoveragePlanner3D::ExploredVolumeCallback(const std_msgs::msg::Float32::ConstSharedPtr explored_volume_msg)
+{
+  explored_volume_ = explored_volume_msg->data;
 }
 
 void SensorCoveragePlanner3D::StateEstimationCallback(
@@ -1500,5 +1507,8 @@ void SensorCoveragePlanner3D::execute()
     PublishGlobalPlanningVisualization(global_path, local_path);
     PublishRuntime();
   }
+  double current_time = this->now().seconds();
+  double delta_time = current_time - start_time_;
+  RCLCPP_INFO(rclcpp::get_logger("EXPLORATION VOLUME"), "[Robot %d] %f: %f", 0, delta_time, explored_volume_);
 }
 }  // namespace sensor_coverage_planner_3d_ns
