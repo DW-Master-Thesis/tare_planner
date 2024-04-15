@@ -861,12 +861,13 @@ void SensorCoveragePlanner3D::GlobalPlanning(std::vector<int>& global_cell_tsp_o
   grid_world_->UpdateCellStatus(viewpoint_manager_);
   grid_world_->UpdateCellKeyposeGraphNodes(merged_keypose_graph_);
   grid_world_->AddPathsInBetweenCells(viewpoint_manager_, merged_keypose_graph_);
-  global_path = grid_world_->SolveGlobalVRP(
-    other_robot_positions_,
-    viewpoint_manager_,
-    global_cell_tsp_order,
-    merged_keypose_graph_
-  );
+  // global_path = grid_world_->SolveGlobalVRP(
+  //   other_robot_positions_,
+  //   viewpoint_manager_,
+  //   global_cell_tsp_order,
+  //   merged_keypose_graph_
+  // );
+  global_path = grid_world_->SolveGlobalTSP(viewpoint_manager_, global_cell_tsp_order, merged_keypose_graph_);
   grid_world_->AddPathsInBetweenCells(viewpoint_manager_, keypose_graph_);
   viewpoint_manager_->UpdateCandidateViewPointCellStatus(grid_world_);
 

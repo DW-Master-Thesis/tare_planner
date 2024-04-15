@@ -24,6 +24,7 @@
 #include <pcl/point_types.h>
 
 #include <grid/grid.h>
+#include <tsp_solver/tsp_solver.h>
 #include <vrp_solver/vrp_solver.h>
 #include <keypose_graph/keypose_graph.h>
 #include <exploration_path/exploration_path.h>
@@ -364,6 +365,11 @@ public:
   geometry_msgs::msg::Point GetCellCenterFromPosition(const geometry_msgs::msg::Point& position);
   exploration_path_ns::ExplorationPath SolveGlobalVRP(
     const std::vector<geometry_msgs::msg::Point>& robot_positions,
+    const std::shared_ptr<viewpoint_manager_ns::ViewPointManager>& viewpoint_manager,
+    std::vector<int>& ordered_cell_indices,
+    const std::shared_ptr<keypose_graph_ns::KeyposeGraph>& keypose_graph = nullptr
+  );
+  exploration_path_ns::ExplorationPath SolveGlobalTSP(
     const std::shared_ptr<viewpoint_manager_ns::ViewPointManager>& viewpoint_manager,
     std::vector<int>& ordered_cell_indices,
     const std::shared_ptr<keypose_graph_ns::KeyposeGraph>& keypose_graph = nullptr
