@@ -51,6 +51,8 @@
 #include "local_coverage_planner/local_coverage_planner.h"
 #include "tare_visualizer/tare_visualizer.h"
 #include "tare_planner_interfaces/srv/merge_planning_interface.hpp"
+#include "tare_planner_interfaces/msg/merger_response.hpp"
+#include "tare_planner_interfaces/msg/planning_interface.hpp"
 
 #define cursup "\033[A"
 #define cursclean "\033[2K"
@@ -196,6 +198,7 @@ private:
   std::string pub_momentum_activation_count_topic_;
 
   std::string global_namespace_;
+  std::string planning_interface_merger_response_topic_;
   std::string planning_interface_merge_service_name_;
 
   // Bool
@@ -327,6 +330,7 @@ private:
   rclcpp::Subscription<geometry_msgs::msg::PolygonStamped>::SharedPtr nogo_boundary_sub_;
   rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr explored_volume_sub_;
   rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr global_explored_volume_sub_;
+  rclcpp::Subscription<tare_planner_interfaces::msg::MergerResponse>::SharedPtr planning_interface_merge_response_sub_;
 
   // ROS publishers
   rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr global_path_full_publisher_;
@@ -359,6 +363,7 @@ private:
   void CoverageBoundaryCallback(const geometry_msgs::msg::PolygonStamped::ConstSharedPtr polygon_msg);
   void ViewPointBoundaryCallback(const geometry_msgs::msg::PolygonStamped::ConstSharedPtr polygon_msg);
   void NogoBoundaryCallback(const geometry_msgs::msg::PolygonStamped::ConstSharedPtr polygon_msg);
+  void PlanningInterfaceMergeResponseCallback(const tare_planner_interfaces::msg::MergerResponse::ConstSharedPtr response_msg);
   void PlanningInterfaceRequestCallback();
   void PlanningInterfaceResponseCallback(rclcpp::Client<tare_planner_interfaces::srv::MergePlanningInterface>::SharedFuture future);
   void ExploredVolumeCallback(const std_msgs::msg::Float32::ConstSharedPtr explored_volume_msg);
@@ -372,7 +377,10 @@ private:
   void UpdateCoveredAreas(int& uncovered_point_num, int& uncovered_frontier_point_num);
   void UpdateVisitedPositions();
   void UpdateGlobalRepresentation();
-  void UpdateMergedPlanningInterface();
+  void UpdateMergedPlanningInterface(
+    std::vector<tare_planner_interfaces::msg::PlanningInterface>& planning_interfaces,
+    std::vector<long int>& robot_ids
+  );
   void GlobalPlanning(std::vector<int>& global_cell_tsp_order, exploration_path_ns::ExplorationPath& global_path);
   void PublishGlobalPlanningVisualization(const exploration_path_ns::ExplorationPath& global_path,
                                           const exploration_path_ns::ExplorationPath& local_path);

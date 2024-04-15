@@ -13,6 +13,7 @@
     pub_runtime_topic_ : runtime
     pub_waypoint_topic_ : way_point
     pub_momentum_activation_count_topic_ : momentum_activation_count
+    planning_interface_merger_response_topic: merger_response
     planning_interface_merge_service_name: merge_planning_interface
 
     kAutoStart : true

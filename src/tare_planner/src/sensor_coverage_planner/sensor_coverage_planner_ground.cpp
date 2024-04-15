@@ -40,6 +40,7 @@ void SensorCoveragePlanner3D::ReadParameters()
   this->declare_parameter<std::string>("pub_runtime_topic_", "/runtime");
   this->declare_parameter<std::string>("pub_waypoint_topic_", "/way_point");
   this->declare_parameter<std::string>("pub_momentum_activation_count_topic_", "momentum_activation_count");
+  this->declare_parameter<std::string>("planning_interface_merger_response_topic", "merger_response");
   this->declare_parameter<std::string>("planning_interface_merge_service_name", "merge_planning_interface");
   this->declare_parameter<std::string>("global_namespace", "/default/");
 
@@ -177,8 +178,10 @@ void SensorCoveragePlanner3D::ReadParameters()
   this->get_parameter("pub_runtime_topic_", pub_runtime_topic_);
   this->get_parameter("pub_waypoint_topic_", pub_waypoint_topic_);
   this->get_parameter("pub_momentum_activation_count_topic_", pub_momentum_activation_count_topic_);
+  this->get_parameter("planning_interface_merger_response_topic", planning_interface_merger_response_topic_);
   this->get_parameter("planning_interface_merge_service_name", planning_interface_merge_service_name_);
   this->get_parameter("global_namespace", global_namespace_);
+  planning_interface_merger_response_topic_ = global_namespace_ + planning_interface_merger_response_topic_;
   planning_interface_merge_service_name_ = global_namespace_ + planning_interface_merge_service_name_;
 
   this->get_parameter("kAutoStart", kAutoStart);
@@ -381,6 +384,9 @@ bool SensorCoveragePlanner3D::initialize()
       "explored_volume", 5, std::bind(&SensorCoveragePlanner3D::ExploredVolumeCallback, this, std::placeholders::_1));
   global_explored_volume_sub_ = this->create_subscription<std_msgs::msg::Float32>(
       global_namespace_ + "explored_volume", 5, std::bind(&SensorCoveragePlanner3D::GlobalExploredVolumeCallback, this, std::placeholders::_1));
+  planning_interface_merge_response_sub_ = this->create_subscription<tare_planner_interfaces::msg::MergerResponse>(
+      planning_interface_merger_response_topic_, 5,
+      std::bind(&SensorCoveragePlanner3D::PlanningInterfaceMergeResponseCallback, this, std::placeholders::_1));
 
   global_path_full_publisher_ = this->create_publisher<nav_msgs::msg::Path>("global_path_full", 1);
   global_path_publisher_ = this->create_publisher<nav_msgs::msg::Path>("global_path", 1);
@@ -598,6 +604,15 @@ void SensorCoveragePlanner3D::NogoBoundaryCallback(const geometry_msgs::msg::Pol
   nogo_boundary_marker_->Publish();
 }
 
+void SensorCoveragePlanner3D::PlanningInterfaceMergeResponseCallback(
+    const tare_planner_interfaces::msg::MergerResponse::ConstSharedPtr response_msg)
+{
+  planning_interface_update_ = true;
+  auto planning_interfaces = response_msg->planning_interfaces;
+  auto robot_ids = response_msg->robot_ids;
+  UpdateMergedPlanningInterface(planning_interfaces, robot_ids);
+}
+
 void SensorCoveragePlanner3D::PlanningInterfaceRequestCallback()
 {
   auto request = std::make_shared<tare_planner_interfaces::srv::MergePlanningInterface::Request>();
@@ -798,11 +813,11 @@ void SensorCoveragePlanner3D::UpdateGlobalRepresentation()
   }
 }
 
-void SensorCoveragePlanner3D::UpdateMergedPlanningInterface()
+void SensorCoveragePlanner3D::UpdateMergedPlanningInterface(
+  std::vector<tare_planner_interfaces::msg::PlanningInterface>& planning_interfaces,
+  std::vector<long int>& robot_ids
+)
 {
-  auto planning_interfaces = merged_planning_interface_response_->planning_interfaces;
-  auto robot_ids = merged_planning_interface_response_->robot_ids;
-
   // merge keypose graph
   Eigen::Vector3d viewpoint_resolution = viewpoint_manager_->GetResolution();
   double add_non_keypose_node_min_dist = std::min(viewpoint_resolution.x(), viewpoint_resolution.y()) / 2;
@@ -1581,7 +1596,9 @@ void SensorCoveragePlanner3D::execute()
 
   if (planning_interface_response_received_)
   {
-    UpdateMergedPlanningInterface();
+    auto planning_interfaces = merged_planning_interface_response_->planning_interfaces;
+    auto robot_ids = merged_planning_interface_response_->robot_ids;
+    UpdateMergedPlanningInterface(planning_interfaces, robot_ids);
     planning_interface_response_received_ = false;
   }
 

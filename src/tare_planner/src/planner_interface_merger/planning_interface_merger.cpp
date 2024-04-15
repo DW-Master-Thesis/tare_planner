@@ -6,10 +6,12 @@ PlanningInterfaceMerger::PlanningInterfaceMerger() : Node("planning_interface_me
   // Declare parameters
   this->declare_parameter("num_robots", 1);
   this->declare_parameter("merge_service_name", "merge_planning_interface");
+  this->declare_parameter("merger_response_topic", "merger_response");
   this->declare_parameter<int>("delay_in_seconds", 10);
   this->get_parameter("num_robots", numRobots);
   this->get_parameter("merge_service_name", mergeServiceName);
   this->get_parameter("delay_in_seconds", delayInSeconds);
+  this->get_parameter("merger_response_topic", mergerResponseTopic);
 
   RCLCPP_INFO(this->get_logger(), "Number of robots: %d", numRobots);
   RCLCPP_INFO(this->get_logger(), "Merge service name: %s", mergeServiceName.c_str());
@@ -66,6 +68,11 @@ bool PlanningInterfaceMerger::initialize()
     uncoveredFrontierPointNumbers.push_back(0);
   }
 
+  // Create publisher
+  mergerResponsePublisher = this->create_publisher<tare_planner_interfaces::msg::MergerResponse>(
+    mergerResponseTopic,
+    10
+  );
   // Create service
   mergePlanningInterfaceService = this->create_service<tare_planner_interfaces::srv::MergePlanningInterface>(
     mergeServiceName,
@@ -96,6 +103,7 @@ void PlanningInterfaceMerger::handleMergePlanningInterface(
   uncoveredPointNumbers[robotId] = uncoveredPointNumber;
   uncoveredFrontierPointNumbers[robotId] = uncoveredFrontierPointNumber;
 
+  tare_planner_interfaces::msg::MergerResponse published_msg;
   response->planning_interfaces.clear();
   for (int i = 0; i < numRobots; i++)
   {
@@ -106,7 +114,10 @@ void PlanningInterfaceMerger::handleMergePlanningInterface(
     planningInterface.uncovered_frontier_point_num = uncoveredFrontierPointNumbers[i];
     response->planning_interfaces.push_back(planningInterface);
     response->robot_ids.push_back(i);
+    published_msg.planning_interfaces.push_back(planningInterface);
+    published_msg.robot_ids.push_back(i);
   }
+  mergerResponsePublisher->publish(published_msg);
 };
 
 int main(int argc, char** argv)
