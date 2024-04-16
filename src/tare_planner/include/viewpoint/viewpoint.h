@@ -163,6 +163,14 @@ public:
   {
     return in_exploring_cell_;
   }
+  void SetInGlobalPlan(bool in_global_plan)
+  {
+    in_global_plan_ = in_global_plan;
+  }
+  bool InGlobalPlan() const
+  {
+    return in_global_plan_;
+  }
 
   void SetCellInd(int cell_ind)
   {
@@ -248,6 +256,7 @@ private:
   bool has_terrain_height_;
   // Whether this viewpoint is in an EXPLORING cell
   bool in_exploring_cell_;
+  bool in_global_plan_;
   // The index of the cell this viewpoint is in.
   int cell_ind_;
   // The index of this viewpoint among all the candidate viewpoints.

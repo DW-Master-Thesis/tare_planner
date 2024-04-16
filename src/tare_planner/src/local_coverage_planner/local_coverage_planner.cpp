@@ -143,6 +143,19 @@ void LocalCoveragePlanner::EnqueueViewpointCandidates(std::vector<std::pair<int,
   }
 }
 
+std::vector<int> LocalCoveragePlanner::FilterViewpoints(const std::vector<int> selected_viewpoint_indices)
+{
+  std::vector<int> filtered_viewpoint_indices;
+  for (const auto& ind : selected_viewpoint_indices)
+  {
+    if (viewpoint_manager_->ViewPointInGlobalPlan(ind))
+    {
+      filtered_viewpoint_indices.push_back(ind);
+    }
+  }
+  return filtered_viewpoint_indices;
+}
+
 void LocalCoveragePlanner::SelectViewPoint(const std::vector<std::pair<int, int>>& queue,
                                            const std::vector<bool>& covered,
                                            std::vector<int>& selected_viewpoint_indices, bool use_frontier)
@@ -708,6 +721,7 @@ exploration_path_ns::ExplorationPath LocalCoveragePlanner::SolveLocalCoveragePro
   viewpoint_sampling_runtime_ += viewpoint_sampling_timer.GetDuration(kRuntimeUnit);
 
   std::vector<int> ordered_viewpoint_indices;
+  std::vector<int> filtered_viewpoint_indices;
   if (!queue.empty() && queue[0].first > parameters_.kMinAddPointNum)
   {
     double min_path_length = DBL_MAX;
@@ -733,6 +747,7 @@ exploration_path_ns::ExplorationPath LocalCoveragePlanner::SolveLocalCoveragePro
       }
 
       misc_utils_ns::UniquifyIntVector(selected_viewpoint_indices_itr);
+      filtered_viewpoint_indices = FilterViewpoints(selected_viewpoint_indices_itr);
 
       select_viewpoint_timer.Stop(false, kRuntimeUnit);
       viewpoint_sampling_runtime_ += select_viewpoint_timer.GetDuration(kRuntimeUnit);
@@ -778,6 +793,7 @@ exploration_path_ns::ExplorationPath LocalCoveragePlanner::SolveLocalCoveragePro
     }
 
     misc_utils_ns::UniquifyIntVector(selected_viewpoint_indices_itr);
+    filtered_viewpoint_indices = FilterViewpoints(selected_viewpoint_indices_itr);
 
     select_viewpoint_timer.Stop(false, kRuntimeUnit);
     viewpoint_sampling_runtime_ += select_viewpoint_timer.GetDuration(kRuntimeUnit);
@@ -807,6 +823,8 @@ exploration_path_ns::ExplorationPath LocalCoveragePlanner::SolveLocalCoveragePro
       viewpoint_manager_->SetViewPointSelected(viewpoint_index, true);
     }
   }
+  // Plan a path only for viewpoints consistent with global path
+  local_path = SolveTSP(filtered_viewpoint_indices, ordered_viewpoint_indices);
   return local_path;
 }
 

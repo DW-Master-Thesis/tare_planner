@@ -9,7 +9,6 @@
  *
  */
 
-#include <memory>
 #include <tf2/LinearMath/Matrix3x3.h>
 #include <tf2/LinearMath/Quaternion.h>
 #include <tare_planner_interfaces/msg/viewpoint_manager.hpp>
@@ -876,13 +875,16 @@ void SensorCoveragePlanner3D::GlobalPlanning(std::vector<int>& global_cell_tsp_o
   grid_world_->UpdateCellStatus(viewpoint_manager_);
   grid_world_->UpdateCellKeyposeGraphNodes(merged_keypose_graph_);
   grid_world_->AddPathsInBetweenCells(viewpoint_manager_, merged_keypose_graph_);
-  // global_path = grid_world_->SolveGlobalVRP(
-  //   other_robot_positions_,
-  //   viewpoint_manager_,
-  //   global_cell_tsp_order,
-  //   merged_keypose_graph_
-  // );
-  global_path = grid_world_->SolveGlobalTSP(viewpoint_manager_, global_cell_tsp_order, merged_keypose_graph_);
+  global_path = grid_world_->SolveGlobalVRP(
+    other_robot_positions_,
+    viewpoint_manager_,
+    global_cell_tsp_order,
+    merged_keypose_graph_
+  );
+  // global_path = grid_world_->SolveGlobalTSP(viewpoint_manager_, global_cell_tsp_order, merged_keypose_graph_);
+  UpdateKeyposeGraph();
+  grid_world_->UpdateCellStatus(viewpoint_manager_);
+  grid_world_->UpdateCellKeyposeGraphNodes(keypose_graph_);
   grid_world_->AddPathsInBetweenCells(viewpoint_manager_, keypose_graph_);
   viewpoint_manager_->UpdateCandidateViewPointCellStatus(grid_world_);
 
@@ -963,7 +965,7 @@ void SensorCoveragePlanner3D::PublishGlobalPlanningVisualization(
 
   grid_world_->GetVisualizationCloud(grid_world_vis_cloud_->cloud_);
   grid_world_vis_cloud_->Publish();
-  grid_world_->GetMarker(grid_world_marker_->marker_);
+  grid_world_->GetConnectedCellMarker(grid_world_marker_->marker_);
   grid_world_marker_->Publish();
   nav_msgs::msg::Path full_path = exploration_path_.GetPath();
   full_path.header.frame_id = "map";

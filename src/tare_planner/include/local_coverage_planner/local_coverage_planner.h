@@ -93,6 +93,7 @@ private:
                                   const std::vector<bool>& covered_point_list,
                                   const std::vector<bool>& covered_frontier_point_list,
                                   const std::vector<int>& selected_viewpoint_array_indices);
+  std::vector<int> FilterViewpoints(const std::vector<int> selected_viewpoint_indices);
 
   void SelectViewPoint(const std::vector<std::pair<int, int>>& queue, const std::vector<bool>& covered,
                        std::vector<int>& selected_viewpoint_indices, bool use_frontier = false);

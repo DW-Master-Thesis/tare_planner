@@ -353,6 +353,10 @@ public:
   void GetExploringCellIndices(std::vector<int>& exploring_cell_indices);
   CellStatus GetCellStatus(int cell_ind);
   void SetCellStatus(int cell_ind, CellStatus status);
+  ExploringStatus GetExploringStatus(int cell_ind)
+  {
+    return subspaces_->GetCell(cell_ind).GetExploringStatus();
+  }
   geometry_msgs::msg::Point GetCellPosition(int cell_ind);
   void SetCellRobotPosition(int cell_ind, const geometry_msgs::msg::Point& robot_position);
   geometry_msgs::msg::Point GetCellRobotPosition(int cell_ind);
@@ -412,6 +416,10 @@ public:
   bool PathValid(const nav_msgs::msg::Path& path, int from_cell_ind, int to_cell_ind);
   bool HasDirectKeyposeGraphConnection(const std::shared_ptr<keypose_graph_ns::KeyposeGraph>& keypose_graph,
                                        const Eigen::Vector3d& start_position, const Eigen::Vector3d& goal_position);
+  bool IsExploringStatusUpdated()
+  {
+    return exploring_status_updated_;
+  }
 
 private:
   int kRowNum;
@@ -446,5 +454,6 @@ private:
   int cur_keypose_graph_node_ind_;
   int cur_robot_cell_ind_;
   int prev_robot_cell_ind_;
+  bool exploring_status_updated_;
 };
 }  // namespace grid_world_ns

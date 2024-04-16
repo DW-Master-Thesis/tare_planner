@@ -1240,6 +1240,17 @@ void ViewPointManager::SetViewPointInExploringCell(int viewpoint_ind, bool in_ex
   int array_ind = GetViewPointArrayInd(viewpoint_ind, use_array_ind);
   viewpoints_[array_ind].SetInExploringCell(in_exploring_cell);
 }
+// In global plan
+bool ViewPointManager::ViewPointInGlobalPlan(int viewpoint_ind, bool use_array_ind)
+{
+  int array_ind = GetViewPointArrayInd(viewpoint_ind, use_array_ind);
+  return viewpoints_[array_ind].InGlobalPlan();
+}
+void ViewPointManager::SetViewPointInGlobalPlan(int viewpoint_ind, bool in_global_plan, bool use_array_ind)
+{
+  int array_ind = GetViewPointArrayInd(viewpoint_ind, use_array_ind);
+  viewpoints_[array_ind].SetInGlobalPlan(in_global_plan);
+}
 // Height
 double ViewPointManager::GetViewPointHeight(int viewpoint_ind, bool use_array_ind)
 {
@@ -1557,6 +1568,18 @@ void ViewPointManager::UpdateCandidateViewPointCellStatus(std::shared_ptr<grid_w
     else
     {
       SetViewPointInExploringCell(ind, false);
+    }
+    grid_world_ns::ExploringStatus exploring_status = grid_world->GetExploringStatus(cell_ind);
+    if (
+      exploring_status == grid_world_ns::ExploringStatus::NextInGlobalPlan ||
+      exploring_status == grid_world_ns::ExploringStatus::InGlobalPlan ||
+      !grid_world->IsExploringStatusUpdated())
+    {
+      SetViewPointInGlobalPlan(ind, true);
+    }
+    else
+    {
+      SetViewPointInGlobalPlan(ind, false);
     }
   }
 }

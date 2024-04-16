@@ -292,6 +292,8 @@ public:
 
   bool ViewPointInExploringCell(int viewpoint_ind, bool use_array_ind = false);
   void SetViewPointInExploringCell(int viewpoint_ind, bool in_exploring_cell, bool use_array_ind = false);
+  bool ViewPointInGlobalPlan(int viewpoint_ind, bool use_array_ind = false);
+  void SetViewPointInGlobalPlan(int viewpoint_ind, bool in_global_plan, bool use_array_ind = false);
 
   double GetViewPointHeight(int viewpoint_ind, bool use_array_ind = false);
   void SetViewPointHeight(int viewpoint_ind, double height, bool use_array_ind = false);

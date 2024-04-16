@@ -67,7 +67,7 @@ bool Cell::IsCellConnected(int cell_ind)
   }
 }
 
-GridWorld::GridWorld(rclcpp::Node::SharedPtr nh) : initialized_(false), use_keypose_graph_(false)
+GridWorld::GridWorld(rclcpp::Node::SharedPtr nh) : initialized_(false), use_keypose_graph_(false), exploring_status_updated_(false)
 {
   ReadParameters(nh);
   robot_position_.x = 0.0;
@@ -961,6 +961,7 @@ exploration_path_ns::ExplorationPath GridWorld::SolveGlobalVRP(
       }
     }
   }
+  exploring_status_updated_ = true;
 
   std::vector<int> node_index;
   node_index = solution[0];
@@ -1001,6 +1002,7 @@ exploration_path_ns::ExplorationPath GridWorld::SolveGlobalVRP(
     double distance;
     nav_msgs::msg::Path path;
     GetDistanceAndPathBetweenCells(cur_cell_ind, next_cell_ind, distance, path, keypose_graph);
+    path = misc_utils_ns::SimplifyPath(path);
     if (path.poses.size() < 2)
     {
       continue;
