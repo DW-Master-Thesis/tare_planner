@@ -910,7 +910,11 @@ exploration_path_ns::ExplorationPath GridWorld::SolveGlobalVRP(
       nav_msgs::msg::Path path_tmp;
       double distance;
       GetDistanceAndPathBetweenCells(all_cell_indices[i], all_cell_indices[j], distance, path_tmp, keypose_graph);
-      distance_matrix[i+1][j+1] = 10 * distance;
+      distance_matrix[i+1][j+1] = (int) 10 * distance;
+      if (distance_matrix[i+1][j+1] <= 0)
+      {
+        distance_matrix[i+1][j+1] = 1000000;
+      }
     }
   }
   for (int i = 0; i < distance_matrix_size; i++)
