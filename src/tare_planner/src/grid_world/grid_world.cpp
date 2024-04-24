@@ -860,7 +860,7 @@ exploration_path_ns::ExplorationPath GridWorld::SolveGlobalVRP(
     global_plan_interfaces::msg::Robot other_robot;
     other_robot.id = robots.size();
     other_robot.position = other_robot_position;
-    distance_matrix_msg_.robots.push_back(other_robot);
+    robots.push_back(other_robot);
     distance_matrix_msg_.cell_or_robot_ids.push_back(other_robot.id);
     distance_matrix_msg_.is_node_robot.push_back(true);
   }
