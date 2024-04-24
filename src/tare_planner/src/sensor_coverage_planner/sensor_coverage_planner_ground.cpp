@@ -182,6 +182,7 @@ void SensorCoveragePlanner3D::ReadParameters()
   this->get_parameter("global_namespace", global_namespace_);
   planning_interface_merger_response_topic_ = global_namespace_ + planning_interface_merger_response_topic_;
   planning_interface_merge_service_name_ = global_namespace_ + planning_interface_merge_service_name_;
+  distance_matrix_topic_ = "distance_matrix";
 
   this->get_parameter("kAutoStart", kAutoStart);
 
@@ -403,6 +404,7 @@ bool SensorCoveragePlanner3D::initialize()
   // Debug
   pointcloud_manager_neighbor_cells_origin_pub_ =
       this->create_publisher<geometry_msgs::msg::PointStamped>("pointcloud_manager_neighbor_cells_origin", 1);
+  distance_matrix_pub_ = this->create_publisher<global_plan_interfaces::msg::DistanceMatrix>(distance_matrix_topic_, 1);
 
   planning_interface_merge_client_ =
       this->create_client<tare_planner_interfaces::srv::MergePlanningInterface>(planning_interface_merge_service_name_);
@@ -890,7 +892,7 @@ void SensorCoveragePlanner3D::GlobalPlanning(std::vector<int>& global_cell_tsp_o
 
   global_tsp_timer.Stop(false);
   global_planning_runtime_ = global_tsp_timer.GetDuration("ms");
-  // RCLCPP_INFO(this->get_logger(), "Global planning finished");
+  distance_matrix_pub_->publish(grid_world_->GetDistanceMatrix());
 }
 
 void SensorCoveragePlanner3D::PublishGlobalPlanningVisualization(

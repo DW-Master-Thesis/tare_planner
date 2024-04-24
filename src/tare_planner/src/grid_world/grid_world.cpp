@@ -14,6 +14,9 @@
 #include <algorithm>
 #include <utils/misc_utils.h>
 #include <viewpoint_manager/viewpoint_manager.h>
+#include <global_plan_interfaces/msg/cell.hpp>
+#include <global_plan_interfaces/msg/robot.hpp>
+#include <global_plan_interfaces/msg/connection_between_nodes.hpp>
 
 namespace grid_world_ns
 {
@@ -594,7 +597,7 @@ void GridWorld::GetExploringCellIndices(std::vector<int>& exploring_cell_indices
   exploring_cell_indices.clear();
   for (int i = 0; i < subspaces_->GetCellNumber(); i++)
   {
-    if (subspaces_->GetCell(i).GetStatus() == CellStatus::EXPLORING)
+    if (subspaces_->GetCell(i).GetStatus() == CellStatus::EXPLORING && subspaces_->GetCell(i).IsRoadmapConnectionPointSet())
     {
       exploring_cell_indices.push_back(i);
     }
@@ -831,6 +834,9 @@ exploration_path_ns::ExplorationPath GridWorld::SolveGlobalVRP(
     const std::shared_ptr<keypose_graph_ns::KeyposeGraph>& keypose_graph
 )
 {
+  distance_matrix_msg_ = global_plan_interfaces::msg::DistanceMatrix();
+  std::vector<global_plan_interfaces::msg::Robot> robots;
+  std::vector<global_plan_interfaces::msg::Cell> cells;
   // Reset Explorating status and Has Robot status
   for (int cell_ind = 0; cell_ind < subspaces_->GetCellNumber(); cell_ind++)
   {
@@ -841,30 +847,54 @@ exploration_path_ns::ExplorationPath GridWorld::SolveGlobalVRP(
   // Get cell indices of robots
   std::vector<int> all_cell_indices;
   all_cell_indices.push_back(GetCellInd(robot_position_.x, robot_position_.y, robot_position_.z));
+  global_plan_interfaces::msg::Robot robot;
+  robot.id = 0;
+  robot.position = robot_position_;
+  robots.push_back(robot);
+  distance_matrix_msg_.cell_or_robot_ids.push_back(robot.id);
+  distance_matrix_msg_.is_node_robot.push_back(true);
   for (const auto& other_robot_position : other_robot_positions)
   {
     int other_robot_cell_ind = GetCellInd(other_robot_position.x, other_robot_position.y, other_robot_position.z);
     all_cell_indices.push_back(other_robot_cell_ind);
+    global_plan_interfaces::msg::Robot other_robot;
+    other_robot.id = robots.size();
+    other_robot.position = other_robot_position;
+    distance_matrix_msg_.robots.push_back(other_robot);
+    distance_matrix_msg_.cell_or_robot_ids.push_back(other_robot.id);
+    distance_matrix_msg_.is_node_robot.push_back(true);
   }
   // Get exploring cell inidices 
   std::vector<int> exploring_cell_indices;
-  for (int i = 0; i < subspaces_->GetCellNumber(); i++)
+  std::vector<int> reachable_exploring_cell_indices;
+  GetExploringCellIndices(exploring_cell_indices);
+  for (int i: exploring_cell_indices)
   {
-    if (subspaces_->GetCell(i).GetStatus() == CellStatus::EXPLORING && subspaces_->GetCell(i).IsRoadmapConnectionPointSet())
+    global_plan_interfaces::msg::Cell cell;
+    cell.id = i;
+    cell.position = subspaces_->GetCell(i).GetPosition();
+    Eigen::Vector3d connection_point = subspaces_->GetCell(i).GetRoadmapConnectionPoint();
+    cell.connection_point.x = connection_point.x();
+    cell.connection_point.y = connection_point.y();
+    cell.connection_point.z = connection_point.z();
+    cells.push_back(cell);
+    double distance;
+    nav_msgs::msg::Path path;
+    GetDistanceAndPathBetweenCells(cur_robot_cell_ind_, i, distance, path, keypose_graph);
+    if (distance > 0.0 && path.poses.size() > 1)
     {
-      double distance;
-      nav_msgs::msg::Path path;
-      GetDistanceAndPathBetweenCells(cur_robot_cell_ind_, i, distance, path, keypose_graph);
-      if (distance > 0.0 && path.poses.size() > 1)
-      {
-        all_cell_indices.push_back(i);
-        exploring_cell_indices.push_back(i);
-      }
+      all_cell_indices.push_back(i);
+      reachable_exploring_cell_indices.push_back(i);
+      distance_matrix_msg_.cell_or_robot_ids.push_back(cell.id);
+      distance_matrix_msg_.is_node_robot.push_back(false);
     }
   }
 
+  distance_matrix_msg_.cells = cells;
+  distance_matrix_msg_.robots = robots;
+
   /****** Return home ******/
-  if (exploring_cell_indices.empty())
+  if (reachable_exploring_cell_indices.empty())
   {
     exploration_path_ns::ExplorationPath global_path;
     return_home_ = true;
@@ -897,24 +927,31 @@ exploration_path_ns::ExplorationPath GridWorld::SolveGlobalVRP(
 
   // Construct distance matrix
   int num_agents = other_robot_positions.size() + 1;
-  int num_nodes = exploring_cell_indices.size();
+  int num_nodes = reachable_exploring_cell_indices.size();
   // RCLCPP_INFO(rclcpp::get_logger("DEBUG"), "num_agents: %d, num_nodes: %d", num_agents, num_nodes);
   int distance_matrix_size = num_nodes + num_agents + 1; // +1 for depot
   std::vector<std::vector<int>> distance_matrix(distance_matrix_size, std::vector<int>(distance_matrix_size, 0));
 
-  // RCLCPP_INFO(rclcpp::get_logger("DEBUG"), "Construct distance matrix");
   for (int i = 0; i < distance_matrix_size - 1; i++)
   {
     for (int j = 0; j < i; j++)
     {
-      nav_msgs::msg::Path path_tmp;
+      nav_msgs::msg::Path path;
       double distance;
-      GetDistanceAndPathBetweenCells(all_cell_indices[i], all_cell_indices[j], distance, path_tmp, keypose_graph);
+      GetDistanceAndPathBetweenCells(all_cell_indices[i], all_cell_indices[j], distance, path, keypose_graph);
       distance_matrix[i+1][j+1] = (int) 10 * distance;
       if (distance_matrix[i+1][j+1] <= 0)
       {
         distance_matrix[i+1][j+1] = 1000000;
       }
+      global_plan_interfaces::msg::ConnectionBetweenNodes connection;
+      connection.from_node_id = i;
+      connection.is_from_node_robot = true ? i < num_agents : false;
+      connection.to_node_id = j;
+      connection.is_to_node_robot = true ? j < num_agents : false;
+      connection.distance = distance_matrix[i+1][j+1];
+      connection.path = path;
+      distance_matrix_msg_.connections.push_back(connection);
     }
   }
   for (int i = 0; i < distance_matrix_size; i++)
@@ -1051,6 +1088,7 @@ exploration_path_ns::ExplorationPath GridWorld::SolveGlobalVRP(
   {
     global_path.Append(global_path.nodes_[0]);
   }
+  distance_matrix_msg_.vrp_solution = global_path.GetPath();
   return global_path;
 }
 

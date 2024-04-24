@@ -29,6 +29,8 @@
 #include <keypose_graph/keypose_graph.h>
 #include <exploration_path/exploration_path.h>
 
+#include <global_plan_interfaces/msg/distance_matrix.hpp>
+
 namespace viewpoint_manager_ns
 {
 class ViewPointManager;
@@ -378,6 +380,10 @@ public:
     std::vector<int>& ordered_cell_indices,
     const std::shared_ptr<keypose_graph_ns::KeyposeGraph>& keypose_graph = nullptr
   );
+  global_plan_interfaces::msg::DistanceMatrix GetDistanceMatrix()
+  {
+    return distance_matrix_msg_;
+  }
 
   inline void SetCurKeyposeGraphNodeInd(int node_ind)
   {
@@ -455,5 +461,6 @@ private:
   int cur_robot_cell_ind_;
   int prev_robot_cell_ind_;
   bool exploring_status_updated_;
+  global_plan_interfaces::msg::DistanceMatrix distance_matrix_msg_;
 };
 }  // namespace grid_world_ns

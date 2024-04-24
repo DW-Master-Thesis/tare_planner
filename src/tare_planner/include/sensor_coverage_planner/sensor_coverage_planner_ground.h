@@ -53,6 +53,7 @@
 #include "tare_planner_interfaces/srv/merge_planning_interface.hpp"
 #include "tare_planner_interfaces/msg/merger_response.hpp"
 #include "tare_planner_interfaces/msg/planning_interface.hpp"
+#include "global_plan_interfaces/msg/distance_matrix.hpp"
 
 #define cursup "\033[A"
 #define cursclean "\033[2K"
@@ -200,6 +201,7 @@ private:
   std::string global_namespace_;
   std::string planning_interface_merger_response_topic_;
   std::string planning_interface_merge_service_name_;
+  std::string distance_matrix_topic_;
 
   // Bool
   bool kAutoStart;
@@ -344,6 +346,7 @@ private:
   rclcpp::Publisher<std_msgs::msg::Int32MultiArray>::SharedPtr runtime_breakdown_pub_;
   rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr runtime_pub_;
   rclcpp::Publisher<std_msgs::msg::Int32>::SharedPtr momentum_activation_count_pub_;
+  rclcpp::Publisher<global_plan_interfaces::msg::DistanceMatrix>::SharedPtr distance_matrix_pub_;
 
   // ROS services
   rclcpp::Client<tare_planner_interfaces::srv::MergePlanningInterface>::SharedPtr planning_interface_merge_client_;
