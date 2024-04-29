@@ -66,6 +66,7 @@ void SensorCoveragePlanner3D::ReadParameters()
   this->declare_parameter<int>("kDirectionChangeCounterThr", 4);
   this->declare_parameter<int>("kDirectionNoChangeCounterThr", 5);
   this->declare_parameter<int>("kRobotId", 0);
+  this->declare_parameter<int>("kNumRobots", 2);
 
   // grid_world
   this->declare_parameter<int>("kGridWorldXNum", 121);
@@ -207,6 +208,7 @@ void SensorCoveragePlanner3D::ReadParameters()
   this->get_parameter("kDirectionChangeCounterThr", kDirectionChangeCounterThr);
   this->get_parameter("kDirectionNoChangeCounterThr", kDirectionNoChangeCounterThr);
   this->get_parameter("kRobotId", kRobotId);
+  this->get_parameter("kNumRobots", kNumRobots);
 }
 
 // PlannerData::PlannerData()
@@ -307,6 +309,15 @@ void SensorCoveragePlanner3D::InitializeData()
   robot_position_.z = 0;
 
   last_robot_position_ = robot_position_;
+
+  for (int i = 0; i < kNumRobots; i++)
+  {
+    geometry_msgs::msg::Point robot_position;
+    robot_position.x = 0;
+    robot_position.y = 0;
+    robot_position.z = 0;
+    other_robot_state_estimations_.push_back(robot_position);
+  }
 }
 
 SensorCoveragePlanner3D::SensorCoveragePlanner3D()
@@ -387,6 +398,22 @@ bool SensorCoveragePlanner3D::initialize()
   planning_interface_merge_response_sub_ = this->create_subscription<tare_planner_interfaces::msg::MergerResponse>(
       planning_interface_merger_response_topic_, 5,
       std::bind(&SensorCoveragePlanner3D::PlanningInterfaceMergeResponseCallback, this, std::placeholders::_1));
+  for (int i = 0; i < kNumRobots; i++)
+  {
+    if (i == kRobotId)
+    {
+      continue;
+    }
+    std::string other_robot_state_estimation_topic = global_namespace_ + "robot_" + std::to_string(i) + "/state_estimation";
+    rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr other_robot_state_estimation_sub =
+      this->create_subscription<nav_msgs::msg::Odometry>(
+        other_robot_state_estimation_topic, 5,
+        [this, i](const nav_msgs::msg::Odometry::ConstSharedPtr msg) {
+          OtherRobotStateEstimationCallback(i, msg);
+        }
+      );
+    other_robot_state_estimation_subs_.push_back(other_robot_state_estimation_sub);
+  }
 
   global_path_full_publisher_ = this->create_publisher<nav_msgs::msg::Path>("global_path_full", 1);
   global_path_publisher_ = this->create_publisher<nav_msgs::msg::Path>("global_path", 1);
@@ -430,6 +457,16 @@ void SensorCoveragePlanner3D::ExploredVolumeCallback(const std_msgs::msg::Float3
 void SensorCoveragePlanner3D::GlobalExploredVolumeCallback(const std_msgs::msg::Float32::ConstSharedPtr explored_volume_msg)
 {
   global_explored_volume_ = explored_volume_msg->data;
+}
+
+void SensorCoveragePlanner3D::OtherRobotStateEstimationCallback(
+  int robot_id,
+  const nav_msgs::msg::Odometry::ConstSharedPtr state_estimation_msg
+)
+{
+  other_robot_state_estimations_[robot_id].x = state_estimation_msg->pose.pose.position.x;
+  other_robot_state_estimations_[robot_id].y = state_estimation_msg->pose.pose.position.y;
+  other_robot_state_estimations_[robot_id].z = state_estimation_msg->pose.pose.position.z;
 }
 
 void SensorCoveragePlanner3D::StateEstimationCallback(
@@ -877,8 +914,18 @@ void SensorCoveragePlanner3D::GlobalPlanning(std::vector<int>& global_cell_tsp_o
   grid_world_->UpdateCellStatus(viewpoint_manager_);
   grid_world_->UpdateCellKeyposeGraphNodes(merged_keypose_graph_);
   grid_world_->AddPathsInBetweenCells(viewpoint_manager_, merged_keypose_graph_);
+  std::vector<geometry_msgs::msg::Point> other_robot_state_estimations;
+  for (int i = 0; i < other_robot_state_estimations_.size(); i++)
+  {
+    if (i == kRobotId)
+    {
+      continue;
+    }
+    other_robot_state_estimations.push_back(other_robot_state_estimations_[i]);
+  }
   global_path = grid_world_->SolveGlobalVRP(
     other_robot_positions_,
+    other_robot_state_estimations,
     viewpoint_manager_,
     global_cell_tsp_order,
     merged_keypose_graph_

@@ -226,6 +226,7 @@ private:
   int kDirectionChangeCounterThr;
   int kDirectionNoChangeCounterThr;
   int kRobotId;
+  int kNumRobots;
 
   std::shared_ptr<pointcloud_utils_ns::PCLCloud<PlannerCloudPointType>> keypose_cloud_;
   std::shared_ptr<pointcloud_utils_ns::PCLCloud<pcl::PointXYZ>> registered_scan_stack_;
@@ -259,6 +260,7 @@ private:
   int cur_keypose_node_ind_;
   Eigen::Vector3d initial_position_;
   std::vector<geometry_msgs::msg::Point> other_robot_positions_;
+  std::vector<geometry_msgs::msg::Point> other_robot_state_estimations_;
 
   std::shared_ptr<keypose_graph_ns::KeyposeGraph> keypose_graph_;
   std::shared_ptr<keypose_graph_ns::KeyposeGraph> merged_keypose_graph_;
@@ -333,6 +335,7 @@ private:
   rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr explored_volume_sub_;
   rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr global_explored_volume_sub_;
   rclcpp::Subscription<tare_planner_interfaces::msg::MergerResponse>::SharedPtr planning_interface_merge_response_sub_;
+  std::vector<rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr> other_robot_state_estimation_subs_;
 
   // ROS publishers
   rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr global_path_full_publisher_;
@@ -371,6 +374,7 @@ private:
   void PlanningInterfaceResponseCallback(rclcpp::Client<tare_planner_interfaces::srv::MergePlanningInterface>::SharedFuture future);
   void ExploredVolumeCallback(const std_msgs::msg::Float32::ConstSharedPtr explored_volume_msg);
   void GlobalExploredVolumeCallback(const std_msgs::msg::Float32::ConstSharedPtr explored_volume_msg);
+  void OtherRobotStateEstimationCallback(int robot_id, const nav_msgs::msg::Odometry::ConstSharedPtr state_estimation_msg);
 
   void SendInitialWaypoint();
   void UpdateKeyposeGraph();

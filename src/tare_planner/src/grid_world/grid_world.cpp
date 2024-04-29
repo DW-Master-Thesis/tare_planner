@@ -829,6 +829,7 @@ geometry_msgs::msg::Point GridWorld::GetCellCenterFromPosition(const geometry_ms
 
 exploration_path_ns::ExplorationPath GridWorld::SolveGlobalVRP(
     const std::vector<geometry_msgs::msg::Point>& other_robot_positions,
+    const std::vector<geometry_msgs::msg::Point>& other_robot_state_estimations,
     const std::shared_ptr<viewpoint_manager_ns::ViewPointManager>& viewpoint_manager,
     std::vector<int>& ordered_cell_indices,
     const std::shared_ptr<keypose_graph_ns::KeyposeGraph>& keypose_graph
@@ -853,13 +854,16 @@ exploration_path_ns::ExplorationPath GridWorld::SolveGlobalVRP(
   robots.push_back(robot);
   distance_matrix_msg_.cell_or_robot_ids.push_back(robot.id);
   distance_matrix_msg_.is_node_robot.push_back(true);
-  for (const auto& other_robot_position : other_robot_positions)
+  for (int i = 0; i < other_robot_positions.size(); i++)
   {
+    geometry_msgs::msg::Point other_robot_position = other_robot_positions[i];
+    geometry_msgs::msg::Point other_robot_state_estimation = other_robot_state_estimations[i];
     int other_robot_cell_ind = GetCellInd(other_robot_position.x, other_robot_position.y, other_robot_position.z);
     all_cell_indices.push_back(other_robot_cell_ind);
     global_plan_interfaces::msg::Robot other_robot;
     other_robot.id = robots.size();
     other_robot.position = other_robot_position;
+    other_robot.state_estimation = other_robot_state_estimation;
     robots.push_back(other_robot);
     distance_matrix_msg_.cell_or_robot_ids.push_back(other_robot.id);
     distance_matrix_msg_.is_node_robot.push_back(true);
@@ -942,7 +946,7 @@ exploration_path_ns::ExplorationPath GridWorld::SolveGlobalVRP(
       distance_matrix[i+1][j+1] = (int) 10 * distance;
       if (distance_matrix[i+1][j+1] <= 0)
       {
-        distance_matrix[i+1][j+1] = 1000000;
+        distance_matrix[i+1][j+1] = INT_MAX;
       }
       global_plan_interfaces::msg::ConnectionBetweenNodes connection;
       connection.from_node_id = i;

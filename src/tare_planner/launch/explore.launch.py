@@ -23,6 +23,7 @@ def launch_tare_node(context):
           get_package_share_directory('tare_planner') + "/" + config_file + '.yaml',
           {
               "kRobotId": int(robot_id),
+              "kNumRobots": int(LaunchConfiguration('numRobots').perform(context)),
               "global_namespace": '/' + namespace + '/'
           },
       ],
@@ -66,8 +67,18 @@ def generate_launch_description():
       default_value='false',
       description='Use boundary for navigation',
   )
+  declare_num_robots = DeclareLaunchArgument(
+      'numRobots',
+      default_value='1',
+      description='Number of robots',
+  )
 
   return LaunchDescription([
-      declare_configFile, declare_rviz, declare_useBoundary, declare_namespace, declare_robotName,
-      OpaqueFunction(function=launch_tare_node)
+      declare_configFile,
+      declare_rviz,
+      declare_useBoundary,
+      declare_namespace,
+      declare_robotName,
+      declare_num_robots,
+      OpaqueFunction(function=launch_tare_node),
   ])
