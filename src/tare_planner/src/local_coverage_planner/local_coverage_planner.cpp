@@ -38,15 +38,15 @@ int LocalCoveragePlanner::GetBoundaryViewpointIndex(const exploration_path_ns::E
   {
     if (viewpoint_manager_->InLocalPlanningHorizon(global_path.nodes_.front().position_))
     {
-      for (int i = 0; i < global_path.nodes_.size(); i++)
+      for (auto node: global_path.nodes_)
       {
-        if (global_path.nodes_[i].type_ == exploration_path_ns::NodeType::GLOBAL_VIEWPOINT ||
-            global_path.nodes_[i].type_ == exploration_path_ns::NodeType::HOME ||
-            !viewpoint_manager_->InLocalPlanningHorizon(global_path.nodes_[i].position_))
+        if (node.type_ == exploration_path_ns::NodeType::GLOBAL_VIEWPOINT ||
+            node.type_ == exploration_path_ns::NodeType::HOME ||
+            !viewpoint_manager_->InLocalPlanningHorizon(node.position_))
         {
           break;
         }
-        boundary_viewpoint_index = viewpoint_manager_->GetNearestCandidateViewPointInd(global_path.nodes_[i].position_);
+        boundary_viewpoint_index = viewpoint_manager_->GetNearestCandidateViewPointInd(node.position_);
       }
     }
   }
@@ -149,6 +149,24 @@ std::vector<int> LocalCoveragePlanner::FilterViewpoints(const std::vector<int> s
   for (const auto& ind : selected_viewpoint_indices)
   {
     if (viewpoint_manager_->ViewPointInGlobalPlan(ind))
+    {
+      filtered_viewpoint_indices.push_back(ind);
+    }
+  }
+  return filtered_viewpoint_indices;
+}
+
+std::vector<int> LocalCoveragePlanner::FilterViewpoints(
+  const std::vector<int> selected_viewpoint_indices,
+  const std::vector<int>& cell_indices
+)
+{
+  std::vector<int> filtered_viewpoint_indices;
+  for (const auto& ind : selected_viewpoint_indices)
+  {
+    // If ind is in cell_ind
+    int viewpoint_cell_ind = viewpoint_manager_->GetViewPointCellInd(ind);
+    if (std::find(cell_indices.begin(), cell_indices.end(), viewpoint_cell_ind) != cell_indices.end())
     {
       filtered_viewpoint_indices.push_back(ind);
     }
@@ -824,7 +842,16 @@ exploration_path_ns::ExplorationPath LocalCoveragePlanner::SolveLocalCoveragePro
     }
   }
   // Plan a path only for viewpoints consistent with global path
-  // local_path = SolveTSP(filtered_viewpoint_indices, ordered_viewpoint_indices);
+  filtered_viewpoint_indices = FilterViewpoints(ordered_viewpoint_indices);
+  GetNavigationViewPointIndices(global_path, filtered_viewpoint_indices);
+  if (filtered_viewpoint_indices.size() > 0)
+  {
+    exploration_path_ns::ExplorationPath filtered_local_path = SolveTSP(filtered_viewpoint_indices, ordered_viewpoint_indices);
+    if (filtered_local_path.GetNodeNum() > 1)
+    {
+      local_path = filtered_local_path;
+    }
+  }
   return local_path;
 }
 
