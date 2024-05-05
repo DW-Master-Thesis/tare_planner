@@ -421,10 +421,17 @@ exploration_path_ns::ExplorationPath LocalCoveragePlanner::SolveTSP(const std::v
       int to_ind = selected_viewpoint_indices[j];
       nav_msgs::msg::Path path = viewpoint_manager_->GetViewPointShortestPath(from_ind, to_ind);
       double path_length = misc_utils_ns::GetPathLength(path);
-      //   int to_graph_idx = graph_index_map_[to_ind];
-      //   double path_length =
-      //       misc_utils_ns::AStarSearch(candidate_viewpoint_graph_, candidate_viewpoint_dist_,
-      //                                  candidate_viewpoint_position_, from_graph_idx, to_graph_idx, false, tmp);
+      if (
+        viewpoint_manager_->ViewPointInNextGlobalPlanNode(from_ind) &&
+        viewpoint_manager_->ViewPointInNextGlobalPlanNode(to_ind)
+      )
+      {
+        path_length = path_length * 0.1;
+        if (path_length < 0)
+        {
+          path_length = 0;
+        }
+      }
       distance_matrix[i][j] = static_cast<int>(10 * path_length);
     }
   }

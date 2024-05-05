@@ -1251,6 +1251,27 @@ void ViewPointManager::SetViewPointInGlobalPlan(int viewpoint_ind, bool in_globa
   int array_ind = GetViewPointArrayInd(viewpoint_ind, use_array_ind);
   viewpoints_[array_ind].SetInGlobalPlan(in_global_plan);
 }
+bool ViewPointManager::ViewPointInNextGlobalPlanNode(int viewpoint_ind, bool use_array_ind)
+{
+  int array_ind = GetViewPointArrayInd(viewpoint_ind, use_array_ind);
+  return viewpoints_[array_ind].InNextGlobalPlanNode();
+}
+void ViewPointManager::SetViewPointInNextGlobalPlanNode(int viewpoint_ind, bool in_next_global_plan_node,
+                                                        bool use_array_ind)
+{
+  int array_ind = GetViewPointArrayInd(viewpoint_ind, use_array_ind);
+  viewpoints_[array_ind].SetInNextGlobalPlanNode(in_next_global_plan_node);
+}
+bool ViewPointManager::ViewPointInRobotCell(int viewpoint_ind, bool use_array_ind)
+{
+  int array_ind = GetViewPointArrayInd(viewpoint_ind, use_array_ind);
+  return viewpoints_[array_ind].InRobotCell();
+}
+void ViewPointManager::SetViewPointInRobotCell(int viewpoint_ind, bool in_robot_cell, bool use_array_ind)
+{
+  int array_ind = GetViewPointArrayInd(viewpoint_ind, use_array_ind);
+  viewpoints_[array_ind].SetInRobotCell(in_robot_cell);
+}
 // Height
 double ViewPointManager::GetViewPointHeight(int viewpoint_ind, bool use_array_ind)
 {
@@ -1557,9 +1578,18 @@ bool ViewPointManager::GetViewPointShortestPathWithMaxLength(const Eigen::Vector
 
 void ViewPointManager::UpdateCandidateViewPointCellStatus(std::shared_ptr<grid_world_ns::GridWorld> const& grid_world)
 {
+  int robot_cell = grid_world->GetCellInd(robot_position_.x(), robot_position_.y(), robot_position_.z());
   for (const auto& ind : candidate_indices_)
   {
     int cell_ind = GetViewPointCellInd(ind);
+    if (cell_ind == robot_cell)
+    {
+      SetViewPointInRobotCell(ind, true);
+    }
+    else
+    {
+      SetViewPointInRobotCell(ind, false);
+    }
     grid_world_ns::CellStatus cell_status = grid_world->GetCellStatus(cell_ind);
     if (cell_status == grid_world_ns::CellStatus::UNSEEN || cell_status == grid_world_ns::CellStatus::EXPLORING)
     {
@@ -1573,6 +1603,7 @@ void ViewPointManager::UpdateCandidateViewPointCellStatus(std::shared_ptr<grid_w
     if (
       exploring_status == grid_world_ns::ExploringStatus::NextInGlobalPlan ||
       exploring_status == grid_world_ns::ExploringStatus::InGlobalPlan ||
+      cell_ind == robot_cell ||
       !grid_world->IsExploringStatusUpdated())
     {
       SetViewPointInGlobalPlan(ind, true);
@@ -1580,6 +1611,17 @@ void ViewPointManager::UpdateCandidateViewPointCellStatus(std::shared_ptr<grid_w
     else
     {
       SetViewPointInGlobalPlan(ind, false);
+    }
+    if (
+      exploring_status == grid_world_ns::ExploringStatus::NextInGlobalPlan ||
+      cell_ind == robot_cell ||
+      !grid_world->IsExploringStatusUpdated())
+    {
+      SetViewPointInNextGlobalPlanNode(ind, true);
+    }
+    else
+    {
+      SetViewPointInNextGlobalPlanNode(ind, false);
     }
   }
 }

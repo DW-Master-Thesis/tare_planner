@@ -171,6 +171,22 @@ public:
   {
     return in_global_plan_;
   }
+  void SetInNextGlobalPlanNode(bool in_next_global_plan_node)
+  {
+    in_next_global_plan_node_ = in_next_global_plan_node;
+  }
+  bool InNextGlobalPlanNode() const
+  {
+    return in_next_global_plan_node_;
+  }
+  void SetInRobotCell(bool in_robot_cell)
+  {
+    in_robot_cell_ = in_robot_cell;
+  }
+  bool InRobotCell() const
+  {
+    return in_robot_cell_;
+  }
 
   void SetCellInd(int cell_ind)
   {
@@ -257,6 +273,8 @@ private:
   // Whether this viewpoint is in an EXPLORING cell
   bool in_exploring_cell_;
   bool in_global_plan_;
+  bool in_next_global_plan_node_;
+  bool in_robot_cell_;
   // The index of the cell this viewpoint is in.
   int cell_ind_;
   // The index of this viewpoint among all the candidate viewpoints.
