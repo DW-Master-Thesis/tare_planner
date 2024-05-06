@@ -760,9 +760,15 @@ void GridWorld::UpdateCellStatus(const std::shared_ptr<viewpoint_manager_ns::Vie
       subspaces_->GetCell(cell_ind).SetStatus(CellStatus::COVERED);
     }
     // Covered to Exploring
-    else if (subspaces_->GetCell(cell_ind).GetStatus() == CellStatus::COVERED &&
-             (above_big_threshold_count >= kCellCoveredToExploringThr ||
-              above_frontier_threshold_count >= kCellCoveredToExploringThr))
+    else if (
+      (
+        subspaces_->GetCell(cell_ind).GetStatus() == CellStatus::COVERED ||
+        subspaces_->GetCell(cell_ind).GetStatus() == CellStatus::COVERED_BY_OTHERS
+      ) && (
+        above_big_threshold_count >= kCellCoveredToExploringThr ||
+        above_frontier_threshold_count >= kCellCoveredToExploringThr
+      )
+    )
     {
       subspaces_->GetCell(cell_ind).SetStatus(CellStatus::EXPLORING);
       almost_covered_cell_indices_.push_back(cell_ind);
@@ -983,6 +989,15 @@ exploration_path_ns::ExplorationPath GridWorld::SolveGlobalVRP(
 
   vrp_solver_ns::VRPSolver vrp_solver(data_model);
   std::vector<std::vector<int>> solution = vrp_solver.Solve();
+  for (auto route: solution)
+  {
+    global_plan_interfaces::msg::VrpRoute vrp_route;
+    for (int j: route)
+    {
+      vrp_route.route.push_back(all_cell_indices[j - 1]);
+    }
+    distance_matrix_msg_.vrp_solution.push_back(vrp_route);
+  }
 
   // Update exploring status
   if (solution[0].size() > 1)
@@ -1092,7 +1107,7 @@ exploration_path_ns::ExplorationPath GridWorld::SolveGlobalVRP(
   {
     global_path.Append(global_path.nodes_[0]);
   }
-  distance_matrix_msg_.vrp_solution = global_path.GetPath();
+  distance_matrix_msg_.global_path = global_path.GetPath();
   return global_path;
 }
 

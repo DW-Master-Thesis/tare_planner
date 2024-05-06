@@ -863,7 +863,7 @@ void SensorCoveragePlanner3D::UpdateMergedPlanningInterface(
   merged_keypose_graph_->SetAllowVerticalEdge(false);
   merged_keypose_graph_->SetAddNonKeyposeNodeMinDist() = add_non_keypose_node_min_dist;
   merged_keypose_graph_ = std::make_shared<keypose_graph_ns::KeyposeGraph>(
-    keypose_graph_ns::KeyposeGraph::merge(shared_from_this(), *merged_keypose_graph_, *keypose_graph_)
+    keypose_graph_ns::KeyposeGraph::copy(shared_from_this(), *keypose_graph_)
   );
   keypose_graph_ns::KeyposeGraph other_keypose_graph(shared_from_this());
   other_keypose_graph.SetAllowVerticalEdge(false);
@@ -876,7 +876,7 @@ void SensorCoveragePlanner3D::UpdateMergedPlanningInterface(
     }
     other_keypose_graph.FromMsg(planning_interfaces[i].keypose_graph);
     merged_keypose_graph_ = std::make_shared<keypose_graph_ns::KeyposeGraph>(
-      keypose_graph_ns::KeyposeGraph::merge(shared_from_this(), *merged_keypose_graph_, other_keypose_graph)
+      keypose_graph_ns::KeyposeGraph::merge(shared_from_this(), *merged_keypose_graph_, other_keypose_graph, *planning_env_)
     );
   }
 

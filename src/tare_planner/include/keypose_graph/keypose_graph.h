@@ -108,7 +108,12 @@ private:
 public:
   KeyposeGraph(rclcpp::Node::SharedPtr nh);
   ~KeyposeGraph() = default;
-  static KeyposeGraph merge(rclcpp::Node::SharedPtr nh, KeyposeGraph& graph1, KeyposeGraph& graph2);
+  static KeyposeGraph merge(
+    rclcpp::Node::SharedPtr nh, 
+    KeyposeGraph& graph1,
+    KeyposeGraph& graph2,
+    const planning_env_ns::PlanningEnv& planning_env
+  );
   static KeyposeGraph copy(rclcpp::Node::SharedPtr nh, KeyposeGraph& graph);
   void FromMsg(const tare_planner_interfaces::msg::KeyposeGraph& msg);
   tare_planner_interfaces::msg::KeyposeGraph ToMsg() const;
