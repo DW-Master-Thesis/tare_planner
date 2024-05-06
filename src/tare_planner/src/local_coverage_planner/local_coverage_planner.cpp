@@ -34,21 +34,25 @@ LocalCoveragePlanner::LocalCoveragePlanner(rclcpp::Node::SharedPtr nh)
 int LocalCoveragePlanner::GetBoundaryViewpointIndex(const exploration_path_ns::ExplorationPath& global_path)
 {
   int boundary_viewpoint_index = robot_viewpoint_ind_;
-  if (!global_path.nodes_.empty())
+  if (
+    global_path.nodes_.empty() ||
+    !viewpoint_manager_->InLocalPlanningHorizon(global_path.nodes_.front().position_)
+  )
   {
-    if (viewpoint_manager_->InLocalPlanningHorizon(global_path.nodes_.front().position_))
+    return boundary_viewpoint_index;
+  }
+  for (auto node: global_path.nodes_)
+  {
+    int nearest_viewpoint_index = viewpoint_manager_->GetNearestCandidateViewPointInd(node.position_);
+    if (viewpoint_manager_->ViewPointInRobotCell(nearest_viewpoint_index))
     {
-      for (auto node: global_path.nodes_)
-      {
-        if (node.type_ == exploration_path_ns::NodeType::GLOBAL_VIEWPOINT ||
-            node.type_ == exploration_path_ns::NodeType::HOME ||
-            !viewpoint_manager_->InLocalPlanningHorizon(node.position_))
-        {
-          break;
-        }
-        boundary_viewpoint_index = viewpoint_manager_->GetNearestCandidateViewPointInd(node.position_);
-      }
+      continue;
     }
+    if (!viewpoint_manager_->InLocalPlanningHorizon(node.position_))
+    {
+      break;
+    }
+    boundary_viewpoint_index = nearest_viewpoint_index;
   }
   return boundary_viewpoint_index;
 }
