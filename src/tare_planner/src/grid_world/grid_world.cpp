@@ -704,10 +704,6 @@ void GridWorld::UpdateCellStatus(const std::shared_ptr<viewpoint_manager_ns::Vie
 
   for (int cell_ind: cells_to_update)
   {
-    if (subspaces_->GetCell(cell_ind).GetStatus() == CellStatus::COVERED_BY_OTHERS)
-    {
-      continue;
-    }
     int candidate_count = 0;
     int selected_viewpoint_count = 0;
     int above_big_threshold_count = 0;

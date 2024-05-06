@@ -291,6 +291,37 @@ void ViewPointManager::FromMsg(const tare_planner_interfaces::msg::ViewpointMana
   candidate_indices_ = msg.candidate_indices;
 }
 
+void ViewPointManager::Merge(const std::shared_ptr<ViewPointManager> other_viewpoint_manager) {
+  for (int idx : other_viewpoint_manager->candidate_indices_)
+  {
+    // Find closest candidate viewpoint
+    if (!other_viewpoint_manager->InRange(idx))
+      continue;
+    viewpoint_ns::ViewPoint other_candidate_vp = other_viewpoint_manager->viewpoints_[idx];
+    Eigen::Vector3d position(
+      other_candidate_vp.GetPosition().x,
+      other_candidate_vp.GetPosition().y,
+      other_candidate_vp.GetPosition().z
+    );
+    int closest_ind = GetNearestCandidateViewPointInd(position);
+    viewpoint_ns::ViewPoint candidate_viewpoint = viewpoints_[closest_ind];
+    double dist = misc_utils_ns::PointXYZDist<geometry_msgs::msg::Point, geometry_msgs::msg::Point>(
+      other_candidate_vp.GetPosition(),
+      candidate_viewpoint.GetPosition());
+    if (dist > vp_.kResolution.x() / 2.0)
+      continue;
+    // Update viewpoint
+    SetViewPointConnected(closest_ind, other_candidate_vp.Connected());
+    SetViewPointVisited(closest_ind, other_candidate_vp.Visited());
+    SetViewPointSelected(closest_ind, other_candidate_vp.Selected());
+    if (other_candidate_vp.IsCandidate())
+    {
+      SetViewPointCandidate(closest_ind, true);
+      candidate_indices_.push_back(closest_ind);
+    }
+  }
+}
+
 void ViewPointManager::ComputeConnectedNeighborIndices()
 {
   connected_neighbor_indices_.resize(vp_.kViewPointNumber);

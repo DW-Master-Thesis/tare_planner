@@ -100,6 +100,7 @@ public:
 
   tare_planner_interfaces::msg::ViewpointManager ToMsg();
   void FromMsg(const tare_planner_interfaces::msg::ViewpointManager& msg);
+  void Merge(const std::shared_ptr<ViewPointManager> other_viewpoint_manager);
 
   int GetViewPointArrayInd(int viewpoint_ind, bool use_array_ind = false) const;
   int GetViewPointInd(int viewpoint_array_ind) const;
