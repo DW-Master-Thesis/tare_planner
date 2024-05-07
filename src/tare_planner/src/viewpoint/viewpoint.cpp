@@ -78,6 +78,16 @@ void ViewPoint::FromMsg(const tare_planner_interfaces::msg::Viewpoint& msg)
   covered_frontier_point_list_ = msg.covered_frontier_point_list;
 }
 
+void ViewPoint::Merge(const ViewPoint& other)
+{
+  lidar_model_ = other.lidar_model_;
+  in_collision_ = in_collision_ || other.in_collision_;
+  connected_ = connected_ || other.connected_;
+  visited_ = visited_ || other.visited_;
+  selected_ = selected_ || other.selected_;
+  is_candidate_ = is_candidate_ || other.is_candidate_;
+}
+
 void ViewPoint::Reset()
 {
   in_collision_ = false;

@@ -304,21 +304,14 @@ void ViewPointManager::Merge(const std::shared_ptr<ViewPointManager> other_viewp
       other_candidate_vp.GetPosition().z
     );
     int closest_ind = GetNearestCandidateViewPointInd(position);
-    viewpoint_ns::ViewPoint candidate_viewpoint = viewpoints_[closest_ind];
+    viewpoint_ns::ViewPoint& candidate_viewpoint = viewpoints_[closest_ind];
     double dist = misc_utils_ns::PointXYZDist<geometry_msgs::msg::Point, geometry_msgs::msg::Point>(
       other_candidate_vp.GetPosition(),
       candidate_viewpoint.GetPosition());
     if (dist > vp_.kResolution.x() / 2.0)
       continue;
     // Update viewpoint
-    SetViewPointConnected(closest_ind, other_candidate_vp.Connected());
-    SetViewPointVisited(closest_ind, other_candidate_vp.Visited());
-    SetViewPointSelected(closest_ind, other_candidate_vp.Selected());
-    if (other_candidate_vp.IsCandidate())
-    {
-      SetViewPointCandidate(closest_ind, true);
-      candidate_indices_.push_back(closest_ind);
-    }
+    candidate_viewpoint.Merge(other_candidate_vp);
   }
 }
 

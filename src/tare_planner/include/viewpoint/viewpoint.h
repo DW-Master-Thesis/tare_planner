@@ -64,6 +64,7 @@ public:
   }
   void ResetCoverage();
   void Reset();
+  void Merge(const ViewPoint& other);
 
   void SetInCollision(bool in_collision)
   {
