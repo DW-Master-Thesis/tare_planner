@@ -372,6 +372,7 @@ public:
   exploration_path_ns::ExplorationPath SolveGlobalVRP(
     const std::vector<geometry_msgs::msg::Point>& robot_positions,
     const std::vector<geometry_msgs::msg::Point>& robot_state_estimations,
+    const std::vector<nav_msgs::msg::Path>& other_robot_global_plans,
     const std::shared_ptr<viewpoint_manager_ns::ViewPointManager>& viewpoint_manager,
     std::vector<int>& ordered_cell_indices,
     const std::shared_ptr<keypose_graph_ns::KeyposeGraph>& keypose_graph = nullptr

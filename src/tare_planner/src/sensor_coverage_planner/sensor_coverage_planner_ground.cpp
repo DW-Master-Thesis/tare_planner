@@ -318,6 +318,7 @@ void SensorCoveragePlanner3D::InitializeData()
     robot_position.z = 0;
     other_robot_state_estimations_.push_back(robot_position);
   }
+  other_robot_global_plans_ = std::vector<nav_msgs::msg::Path>(kNumRobots);
 }
 
 SensorCoveragePlanner3D::SensorCoveragePlanner3D()
@@ -649,6 +650,9 @@ void SensorCoveragePlanner3D::PlanningInterfaceMergeResponseCallback(
   auto planning_interfaces = response_msg->planning_interfaces;
   auto robot_ids = response_msg->robot_ids;
   UpdateMergedPlanningInterface(planning_interfaces, robot_ids);
+  int requesting_robot_id = response_msg->requesting_robot_id;
+  nav_msgs::msg::Path requesting_robot_global_plan = response_msg->requesting_robot_global_plan;
+  other_robot_global_plans_[requesting_robot_id] = requesting_robot_global_plan;
 }
 
 void SensorCoveragePlanner3D::PlanningInterfaceRequestCallback()
@@ -658,6 +662,7 @@ void SensorCoveragePlanner3D::PlanningInterfaceRequestCallback()
   request->planning_interface.uncovered_frontier_point_num = uncovered_frontier_point_num_;
   request->planning_interface.keypose_graph = keypose_graph_->ToMsg();
   request->planning_interface.viewpoint_manager = viewpoint_manager_->ToMsg();
+  request->global_plan = global_plan_;
   request->robot_id = kRobotId;
 
   auto future_result = planning_interface_merge_client_->async_send_request(
@@ -927,6 +932,7 @@ void SensorCoveragePlanner3D::GlobalPlanning(std::vector<int>& global_cell_tsp_o
   global_path = grid_world_->SolveGlobalVRP(
     other_robot_positions_,
     other_robot_state_estimations,
+    other_robot_global_plans_,
     viewpoint_manager_,
     global_cell_tsp_order,
     merged_keypose_graph_
@@ -1661,6 +1667,7 @@ void SensorCoveragePlanner3D::execute()
     exploration_path_ns::ExplorationPath global_path;
     exploration_path_ns::ExplorationPath local_path;
     GlobalPlanning(global_cell_tsp_order, global_path);
+    global_plan_ = global_path.GetPath();
     LocalPlanning(uncovered_point_num_, uncovered_frontier_point_num_, global_path, local_path);
 
     near_home_ = GetRobotToHomeDistance() < kRushHomeDist;

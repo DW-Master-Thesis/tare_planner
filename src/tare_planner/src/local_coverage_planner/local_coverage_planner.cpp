@@ -426,7 +426,7 @@ exploration_path_ns::ExplorationPath LocalCoveragePlanner::SolveTSP(const std::v
       nav_msgs::msg::Path path = viewpoint_manager_->GetViewPointShortestPath(from_ind, to_ind);
       double path_length = misc_utils_ns::GetPathLength(path);
       if (
-        viewpoint_manager_->ViewPointInNextGlobalPlanNode(from_ind) &&
+        viewpoint_manager_->ViewPointInNextGlobalPlanNode(from_ind) ||
         viewpoint_manager_->ViewPointInNextGlobalPlanNode(to_ind)
       )
       {

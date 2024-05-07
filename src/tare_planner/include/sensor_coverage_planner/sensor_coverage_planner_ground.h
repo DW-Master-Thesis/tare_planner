@@ -261,6 +261,8 @@ private:
   Eigen::Vector3d initial_position_;
   std::vector<geometry_msgs::msg::Point> other_robot_positions_;
   std::vector<geometry_msgs::msg::Point> other_robot_state_estimations_;
+  nav_msgs::msg::Path global_plan_;
+  std::vector<nav_msgs::msg::Path> other_robot_global_plans_;
 
   std::shared_ptr<keypose_graph_ns::KeyposeGraph> keypose_graph_;
   std::shared_ptr<keypose_graph_ns::KeyposeGraph> merged_keypose_graph_;

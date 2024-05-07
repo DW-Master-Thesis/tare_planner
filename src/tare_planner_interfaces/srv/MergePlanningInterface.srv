@@ -1,5 +1,6 @@
 PlanningInterface planning_interface
 int64 robot_id
+nav_msgs/Path global_plan
 ---
 PlanningInterface[] planning_interfaces
 int64[] robot_ids

@@ -8,6 +8,7 @@ endif()
 # find dependencies
 find_package(ament_cmake REQUIRED)
 find_package(geometry_msgs REQUIRED)
+find_package(nav_msgs REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
 
 rosidl_generate_interfaces(${PROJECT_NAME}
@@ -23,7 +24,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/PlanningInterface.msg"
   "msg/MergerResponse.msg"
   "srv/MergePlanningInterface.srv"
-  DEPENDENCIES geometry_msgs
+  DEPENDENCIES geometry_msgs nav_msgs
 )
 
 if(BUILD_TESTING)

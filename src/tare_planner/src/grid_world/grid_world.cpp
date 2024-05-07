@@ -832,6 +832,7 @@ geometry_msgs::msg::Point GridWorld::GetCellCenterFromPosition(const geometry_ms
 exploration_path_ns::ExplorationPath GridWorld::SolveGlobalVRP(
     const std::vector<geometry_msgs::msg::Point>& other_robot_positions,
     const std::vector<geometry_msgs::msg::Point>& other_robot_state_estimations,
+    const std::vector<nav_msgs::msg::Path>& other_robot_global_plans,
     const std::shared_ptr<viewpoint_manager_ns::ViewPointManager>& viewpoint_manager,
     std::vector<int>& ordered_cell_indices,
     const std::shared_ptr<keypose_graph_ns::KeyposeGraph>& keypose_graph
@@ -1104,6 +1105,7 @@ exploration_path_ns::ExplorationPath GridWorld::SolveGlobalVRP(
     global_path.Append(global_path.nodes_[0]);
   }
   distance_matrix_msg_.global_path = global_path.GetPath();
+  distance_matrix_msg_.other_robot_global_paths = other_robot_global_plans;
   return global_path;
 }
 
