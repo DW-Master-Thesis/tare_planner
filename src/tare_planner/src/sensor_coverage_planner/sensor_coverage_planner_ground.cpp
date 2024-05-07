@@ -901,7 +901,7 @@ void SensorCoveragePlanner3D::UpdateMergedPlanningInterface(
     grid_world_->UpdateCellStatus(published_viewpoint_manager_, true);
     grid_world_->AddPathsInBetweenCells(published_viewpoint_manager_, merged_keypose_graph_);
     other_robot_positions_.push_back(published_viewpoint_manager_->GetRobotPosition());
-    viewpoint_manager_->Merge(published_viewpoint_manager_);
+    // viewpoint_manager_->Merge(published_viewpoint_manager_);
   }
   grid_world_->UpdateRobotPosition(robot_position_);
   grid_world_->UpdateNeighborCells(robot_position_);
