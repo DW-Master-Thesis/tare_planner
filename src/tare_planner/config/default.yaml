@@ -30,7 +30,7 @@
     kAtHomeDistThreshold : 0.5
     kTerrainCollisionThreshold : 0.5
     kLookAheadDistance : 8.0
-    kUseMomentum : false 
+    kUseMomentum : true
     kDirectionChangeCounterThr : 6
     kDirectionNoChangeCounterThr : 5
     kRobotId: 0

@@ -1041,6 +1041,7 @@ void SensorCoveragePlanner3D::LocalPlanning(int uncovered_point_num, int uncover
 {
   misc_utils_ns::Timer local_tsp_timer("Local planning");
   local_tsp_timer.Start();
+  local_coverage_planner_->SetRobotPosition(Eigen::Vector3d(robot_position_.x, robot_position_.y, robot_position_.z));
   if (lookahead_point_update_)
   {
     local_coverage_planner_->SetLookAheadPoint(lookahead_point_);
@@ -1129,7 +1130,6 @@ bool SensorCoveragePlanner3D::GetLookAheadPoint(const exploration_path_ns::Explo
       break;
     }
   }
-
   double dist_from_end = 0.0;
   for (int i = global_path.nodes_.size() - 2; i > 0; i--)
   {
@@ -1140,6 +1140,7 @@ bool SensorCoveragePlanner3D::GetLookAheadPoint(const exploration_path_ns::Explo
     }
   }
 
+  // If local path too short, use global path
   bool local_path_too_short = true;
   for (int i = 0; i < local_path.nodes_.size(); i++)
   {
@@ -1181,6 +1182,7 @@ bool SensorCoveragePlanner3D::GetLookAheadPoint(const exploration_path_ns::Explo
     return false;
   }
 
+  // Get index of robot and lookahead point in local path
   bool has_lookahead = false;
   bool dir = true;
   int robot_i = 0;
@@ -1198,32 +1200,27 @@ bool SensorCoveragePlanner3D::GetLookAheadPoint(const exploration_path_ns::Explo
     }
   }
 
-  int forward_viewpoint_count = 0;
-  int backward_viewpoint_count = 0;
-
-  bool local_loop = false;
+  // If local path is a loop, forward path starts at index 0 and backward path starts at index size - 1
+  int forward_robot_i = robot_i;
+  int backward_robot_i = robot_i;
   if (local_path.nodes_.front() == local_path.nodes_.back() &&
       local_path.nodes_.front().type_ == exploration_path_ns::NodeType::ROBOT)
   {
-    local_loop = true;
+    forward_robot_i = 0;
+    backward_robot_i = local_path.nodes_.size() - 1;
   }
 
-  if (local_loop)
-  {
-    robot_i = 0;
-  }
-  for (int i = robot_i + 1; i < local_path.GetNodeNum(); i++)
+  // Count number of viewpoints in forward and backward direction
+  int forward_viewpoint_count = 0;
+  int backward_viewpoint_count = 0;
+  for (int i = forward_robot_i + 1; i < local_path.GetNodeNum(); i++)
   {
     if (local_path.nodes_[i].type_ == exploration_path_ns::NodeType::LOCAL_VIEWPOINT)
     {
       forward_viewpoint_count++;
     }
   }
-  if (local_loop)
-  {
-    robot_i = local_path.nodes_.size() - 1;
-  }
-  for (int i = robot_i - 1; i >= 0; i--)
+  for (int i = backward_robot_i - 1; i >= 0; i--)
   {
     if (local_path.nodes_[i].type_ == exploration_path_ns::NodeType::LOCAL_VIEWPOINT)
     {
@@ -1231,68 +1228,70 @@ bool SensorCoveragePlanner3D::GetLookAheadPoint(const exploration_path_ns::Explo
     }
   }
 
+  // Get forward and backward lookahead points, which are:
+  //  - points out of sight
+  //  - points that are at least kLookAheadDistance away from the robot
+  //  - points that are viewpoint, local path start or local path end
+  //  - points that are at the end of the local path (IS THIS CORRECT?)
   Eigen::Vector3d forward_lookahead_point = robot_position;
   Eigen::Vector3d backward_lookahead_point = robot_position;
-
   bool has_forward = false;
   bool has_backward = false;
-
-  if (local_loop)
-  {
-    robot_i = 0;
-  }
   bool forward_lookahead_point_in_los = true;
   bool backward_lookahead_point_in_los = true;
   double length_from_robot = 0.0;
-  for (int i = robot_i + 1; i < local_path.GetNodeNum(); i++)
+  for (int i = forward_robot_i + 1; i < local_path.GetNodeNum(); i++)
   {
     length_from_robot += (local_path.nodes_[i].position_ - local_path.nodes_[i - 1].position_).norm();
-    double dist_to_robot = (local_path.nodes_[i].position_ - robot_position).norm();
     bool in_line_of_sight = true;
     if (i < local_path.GetNodeNum() - 1)
     {
       in_line_of_sight = viewpoint_manager_->InCurrentFrameLineOfSight(local_path.nodes_[i + 1].position_);
     }
-    if ((length_from_robot > kLookAheadDistance || (kUseLineOfSightLookAheadPoint && !in_line_of_sight) ||
-         local_path.nodes_[i].type_ == exploration_path_ns::NodeType::LOCAL_VIEWPOINT ||
-         local_path.nodes_[i].type_ == exploration_path_ns::NodeType::LOCAL_PATH_START ||
-         local_path.nodes_[i].type_ == exploration_path_ns::NodeType::LOCAL_PATH_END ||
-         i == local_path.GetNodeNum() - 1))
-
+    if (kUseLineOfSightLookAheadPoint && !in_line_of_sight)
     {
-      if (kUseLineOfSightLookAheadPoint && !in_line_of_sight)
-      {
-        forward_lookahead_point_in_los = false;
-      }
+      forward_lookahead_point_in_los = false;
+      forward_lookahead_point = local_path.nodes_[i].position_;
+      has_forward = true;
+      break;
+    }
+    if (
+      length_from_robot > kLookAheadDistance ||
+      local_path.nodes_[i].type_ == exploration_path_ns::NodeType::LOCAL_VIEWPOINT ||
+      local_path.nodes_[i].type_ == exploration_path_ns::NodeType::LOCAL_PATH_START ||
+      local_path.nodes_[i].type_ == exploration_path_ns::NodeType::LOCAL_PATH_END ||
+      i == local_path.GetNodeNum() - 1
+    )
+    {
       forward_lookahead_point = local_path.nodes_[i].position_;
       has_forward = true;
       break;
     }
   }
-  if (local_loop)
-  {
-    robot_i = local_path.nodes_.size() - 1;
-  }
   length_from_robot = 0.0;
-  for (int i = robot_i - 1; i >= 0; i--)
+  for (int i = backward_robot_i - 1; i >= 0; i--)
   {
     length_from_robot += (local_path.nodes_[i].position_ - local_path.nodes_[i + 1].position_).norm();
-    double dist_to_robot = (local_path.nodes_[i].position_ - robot_position).norm();
     bool in_line_of_sight = true;
     if (i > 0)
     {
       in_line_of_sight = viewpoint_manager_->InCurrentFrameLineOfSight(local_path.nodes_[i - 1].position_);
     }
-    if ((length_from_robot > kLookAheadDistance || (kUseLineOfSightLookAheadPoint && !in_line_of_sight) ||
-         local_path.nodes_[i].type_ == exploration_path_ns::NodeType::LOCAL_VIEWPOINT ||
-         local_path.nodes_[i].type_ == exploration_path_ns::NodeType::LOCAL_PATH_START ||
-         local_path.nodes_[i].type_ == exploration_path_ns::NodeType::LOCAL_PATH_END || i == 0))
-
+    if (kUseLineOfSightLookAheadPoint && !in_line_of_sight)
     {
-      if (kUseLineOfSightLookAheadPoint && !in_line_of_sight)
-      {
-        backward_lookahead_point_in_los = false;
-      }
+      backward_lookahead_point_in_los = false;
+      backward_lookahead_point = local_path.nodes_[i].position_;
+      has_backward = true;
+      break;
+    }
+    if (
+      length_from_robot > kLookAheadDistance ||
+      local_path.nodes_[i].type_ == exploration_path_ns::NodeType::LOCAL_VIEWPOINT ||
+      local_path.nodes_[i].type_ == exploration_path_ns::NodeType::LOCAL_PATH_START ||
+      local_path.nodes_[i].type_ == exploration_path_ns::NodeType::LOCAL_PATH_END ||
+      i == 0
+    )
+    {
       backward_lookahead_point = local_path.nodes_[i].position_;
       has_backward = true;
       break;
@@ -1310,27 +1309,15 @@ bool SensorCoveragePlanner3D::GetLookAheadPoint(const exploration_path_ns::Explo
     exit(1);
   }
 
+  if (has_backward)
+  {
+    forward_lookahead_point = backward_lookahead_point;
+    forward_lookahead_point_in_los = backward_lookahead_point_in_los;
+    has_forward = true;
+  }
+
   double dx = lookahead_point_direction_.x();
   double dy = lookahead_point_direction_.y();
-
-  // double lx = 1.0;
-  // double ly = 0.0;
-  // double dx = 1.0;
-  // double dy = 0.0;
-  // if (moving_forward_)
-  // {
-  //   lx = 1.0;
-  // }
-  // else
-  // {
-  //   lx = -1.0;
-  // }
-
-  // dx = cos(robot_yaw_) * lx - sin(robot_yaw_) * ly;
-  // dy = sin(robot_yaw_) * lx + cos(robot_yaw_) * ly;
-
-  // double dx = moving_direction_.x();
-  // double dy = moving_direction_.y();
 
   double forward_angle_score = -2;
   double backward_angle_score = -2;
@@ -1373,7 +1360,7 @@ bool SensorCoveragePlanner3D::GetLookAheadPoint(const exploration_path_ns::Explo
   }
   if (relocation_)
   {
-    if (use_momentum_ && kUseMomentum)
+    if (use_momentum_ || kUseMomentum)
     {
       if (forward_angle_score > backward_angle_score)
       {
