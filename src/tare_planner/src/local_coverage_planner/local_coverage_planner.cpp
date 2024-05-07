@@ -426,15 +426,17 @@ exploration_path_ns::ExplorationPath LocalCoveragePlanner::SolveTSP(const std::v
       nav_msgs::msg::Path path = viewpoint_manager_->GetViewPointShortestPath(from_ind, to_ind);
       double path_length = misc_utils_ns::GetPathLength(path);
       if (
-        viewpoint_manager_->ViewPointInNextGlobalPlanNode(from_ind) ||
-        viewpoint_manager_->ViewPointInNextGlobalPlanNode(to_ind)
+        (
+          viewpoint_manager_->ViewPointInNextGlobalPlanNode(from_ind) &&
+          to_ind == robot_viewpoint_ind_
+        ) ||
+        (
+          viewpoint_manager_->ViewPointInNextGlobalPlanNode(to_ind) &&
+          from_ind == robot_viewpoint_ind_
+        )
       )
       {
-        path_length = path_length * 0.1;
-        if (path_length < 0)
-        {
-          path_length = 0;
-        }
+        path_length = 0;
       }
       distance_matrix[i][j] = static_cast<int>(10 * path_length);
     }
@@ -776,7 +778,6 @@ exploration_path_ns::ExplorationPath LocalCoveragePlanner::SolveLocalCoveragePro
       }
 
       misc_utils_ns::UniquifyIntVector(selected_viewpoint_indices_itr);
-      filtered_viewpoint_indices = FilterViewpoints(selected_viewpoint_indices_itr);
 
       select_viewpoint_timer.Stop(false, kRuntimeUnit);
       viewpoint_sampling_runtime_ += select_viewpoint_timer.GetDuration(kRuntimeUnit);
@@ -822,7 +823,6 @@ exploration_path_ns::ExplorationPath LocalCoveragePlanner::SolveLocalCoveragePro
     }
 
     misc_utils_ns::UniquifyIntVector(selected_viewpoint_indices_itr);
-    filtered_viewpoint_indices = FilterViewpoints(selected_viewpoint_indices_itr);
 
     select_viewpoint_timer.Stop(false, kRuntimeUnit);
     viewpoint_sampling_runtime_ += select_viewpoint_timer.GetDuration(kRuntimeUnit);

@@ -1638,7 +1638,6 @@ void ViewPointManager::UpdateCandidateViewPointCellStatus(std::shared_ptr<grid_w
     }
     if (
       exploring_status == grid_world_ns::ExploringStatus::NextInGlobalPlan ||
-      cell_ind == robot_cell ||
       !grid_world->IsExploringStatusUpdated())
     {
       SetViewPointInNextGlobalPlanNode(ind, true);
