@@ -915,6 +915,9 @@ void SensorCoveragePlanner3D::GlobalPlanning(std::vector<int>& global_cell_tsp_o
   misc_utils_ns::Timer global_tsp_timer("Global planning");
   global_tsp_timer.Start();
 
+  merged_keypose_graph_ = std::make_shared<keypose_graph_ns::KeyposeGraph>(
+    keypose_graph_ns::KeyposeGraph::merge(shared_from_this(), *merged_keypose_graph_, *keypose_graph_, *planning_env_)
+  );
   merged_keypose_graph_->CheckLocalCollision(robot_position_, viewpoint_manager_);
   merged_keypose_graph_->CheckConnectivity(robot_position_);
   grid_world_->UpdateCellStatus(viewpoint_manager_);
@@ -1045,6 +1048,7 @@ void SensorCoveragePlanner3D::LocalPlanning(int uncovered_point_num, int uncover
   local_path = local_coverage_planner_->SolveLocalCoverageProblem(global_path, uncovered_point_num,
                                                                   uncovered_frontier_point_num);
   local_tsp_timer.Stop(false);
+  keypose_graph_->AddSelectedViewpoints(*viewpoint_manager_);
 }
 
 void SensorCoveragePlanner3D::PublishLocalPlanningVisualization(const exploration_path_ns::ExplorationPath& local_path)

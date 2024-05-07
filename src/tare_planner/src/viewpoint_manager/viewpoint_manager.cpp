@@ -1210,7 +1210,7 @@ void ViewPointManager::SetViewPointConnected(int viewpoint_ind, bool connected, 
   viewpoints_[array_ind].SetConnected(connected);
 }
 // Visited
-bool ViewPointManager::ViewPointVisited(int viewpoint_ind, bool use_array_ind)
+bool ViewPointManager::ViewPointVisited(int viewpoint_ind, bool use_array_ind) const
 {
   int array_ind = GetViewPointArrayInd(viewpoint_ind, use_array_ind);
   return viewpoints_[array_ind].Visited();
@@ -1221,7 +1221,7 @@ void ViewPointManager::SetViewPointVisited(int viewpoint_ind, bool visited, bool
   viewpoints_[array_ind].SetVisited(visited);
 }
 // Selected
-bool ViewPointManager::ViewPointSelected(int viewpoint_ind, bool use_array_ind)
+bool ViewPointManager::ViewPointSelected(int viewpoint_ind, bool use_array_ind) const
 {
   int array_ind = GetViewPointArrayInd(viewpoint_ind, use_array_ind);
   return viewpoints_[array_ind].Selected();
@@ -1320,7 +1320,7 @@ void ViewPointManager::SetViewPointInCurrentFrameLineOfSight(int viewpoint_ind, 
   viewpoints_[array_ind].SetInCurrentFrameLineOfSight(in_current_frame_line_of_sight);
 }
 // Position
-geometry_msgs::msg::Point ViewPointManager::GetViewPointPosition(int viewpoint_ind, bool use_array_ind)
+geometry_msgs::msg::Point ViewPointManager::GetViewPointPosition(int viewpoint_ind, bool use_array_ind) const
 {
   int array_ind = GetViewPointArrayInd(viewpoint_ind, use_array_ind);
   return viewpoints_[array_ind].GetPosition();

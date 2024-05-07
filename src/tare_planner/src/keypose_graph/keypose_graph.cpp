@@ -896,6 +896,17 @@ int KeyposeGraph::AddKeyposeNode(const nav_msgs::msg::Odometry& keypose,
   }
 }
 
+void KeyposeGraph::AddSelectedViewpoints(const viewpoint_manager_ns::ViewPointManager &viewpoint_manager)
+{
+  for (int viewpoint_ind : viewpoint_manager.candidate_indices_)
+  {
+    if (viewpoint_manager.ViewPointSelected(viewpoint_ind) && !viewpoint_manager.ViewPointVisited(viewpoint_ind))
+    {
+      AddNonKeyposeNode(viewpoint_manager.GetViewPointPosition(viewpoint_ind));
+    }
+  }
+}
+
 bool KeyposeGraph::IsPositionReachable(const geometry_msgs::msg::Point& point, double dist_threshold)
 {
   int closest_node_ind = 0;

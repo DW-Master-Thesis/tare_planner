@@ -279,10 +279,10 @@ public:
   bool ViewPointConnected(int viewpoint_ind, bool use_array_ind = false);
   void SetViewPointConnected(int viewpoint_ind, bool connected, bool use_array_ind = false);
 
-  bool ViewPointVisited(int viewpoint_ind, bool use_array_ind = false);
+  bool ViewPointVisited(int viewpoint_ind, bool use_array_ind = false) const;
   void SetViewPointVisited(int viewpoint_ind, bool visited, bool use_array_ind = false);
 
-  bool ViewPointSelected(int viewpoint_ind, bool use_array_ind = false);
+  bool ViewPointSelected(int viewpoint_ind, bool use_array_ind = false) const;
   void SetViewPointSelected(int viewpoint_ind, bool selected, bool use_array_ind = false);
 
   bool IsViewPointCandidate(int viewpoint_ind, bool use_array_ind = false);
@@ -308,7 +308,7 @@ public:
   void SetViewPointInCurrentFrameLineOfSight(int viewpoint_ind, bool in_current_frame_line_of_sight,
                                              bool use_array_ind = false);
 
-  geometry_msgs::msg::Point GetViewPointPosition(int viewpoint_ind, bool use_array_ind = false);
+  geometry_msgs::msg::Point GetViewPointPosition(int viewpoint_ind, bool use_array_ind = false) const;
   void SetViewPointPosition(int viewpoint_ind, geometry_msgs::msg::Point position, bool use_array_ind = false);
 
   int GetViewPointCellInd(int viewpoint_ind, bool use_array_ind = false);
