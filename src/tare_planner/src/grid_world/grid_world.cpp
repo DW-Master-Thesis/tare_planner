@@ -739,19 +739,26 @@ void GridWorld::UpdateCellStatus(const std::shared_ptr<viewpoint_manager_ns::Vie
       }
     }
     // Exploring to Covered by others
-    if (others &&
-        above_frontier_threshold_count < kCellExploringToCoveredThr &&
-        above_small_threshold_count < kCellExploringToCoveredThr && selected_viewpoint_count == 0 &&
-        candidate_count > 0)
+    if (
+      others &&
+      subspaces_->GetCell(cell_ind).GetStatus() != CellStatus::COVERED &&
+      above_frontier_threshold_count < kCellExploringToCoveredThr &&
+      above_small_threshold_count < kCellExploringToCoveredThr && 
+      selected_viewpoint_count == 0 &&
+      candidate_count > 0
+    )
     {
       subspaces_->GetCell(cell_ind).SetStatus(CellStatus::COVERED_BY_OTHERS);
       // continue;
     }
     // Exploring to Covered
-    if (subspaces_->GetCell(cell_ind).GetStatus() == CellStatus::EXPLORING &&
-        above_frontier_threshold_count < kCellExploringToCoveredThr &&
-        above_small_threshold_count < kCellExploringToCoveredThr && selected_viewpoint_count == 0 &&
-        candidate_count > 0)
+    else if (
+      subspaces_->GetCell(cell_ind).GetStatus() == CellStatus::EXPLORING &&
+      above_frontier_threshold_count < kCellExploringToCoveredThr &&
+      above_small_threshold_count < kCellExploringToCoveredThr &&
+      selected_viewpoint_count == 0 &&
+      candidate_count > 0
+    )
     {
       subspaces_->GetCell(cell_ind).SetStatus(CellStatus::COVERED);
     }
@@ -770,13 +777,22 @@ void GridWorld::UpdateCellStatus(const std::shared_ptr<viewpoint_manager_ns::Vie
       almost_covered_cell_indices_.push_back(cell_ind);
     }
     // Exploring to Almost covered
-    else if (subspaces_->GetCell(cell_ind).GetStatus() == CellStatus::EXPLORING && selected_viewpoint_count == 0 &&
-             candidate_count > 0)
+    else if (
+      subspaces_->GetCell(cell_ind).GetStatus() == CellStatus::EXPLORING &&
+      selected_viewpoint_count == 0 &&
+      candidate_count > 0
+    )
     {
       almost_covered_cell_indices_.push_back(cell_ind);
     }
     // Any status other than COVERED to Explorting
-    else if (subspaces_->GetCell(cell_ind).GetStatus() != CellStatus::COVERED && selected_viewpoint_count > 0 && not_visited)
+    else if (
+      (
+        subspaces_->GetCell(cell_ind).GetStatus() != CellStatus::COVERED &&
+        subspaces_->GetCell(cell_ind).GetStatus() != CellStatus::COVERED_BY_OTHERS
+      ) &&
+      selected_viewpoint_count > 0
+    )
     {
       subspaces_->GetCell(cell_ind).SetStatus(CellStatus::EXPLORING);
       almost_covered_cell_indices_.erase(
