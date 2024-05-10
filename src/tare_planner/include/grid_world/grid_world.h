@@ -375,7 +375,8 @@ public:
     const std::vector<nav_msgs::msg::Path>& other_robot_global_plans,
     const std::shared_ptr<viewpoint_manager_ns::ViewPointManager>& viewpoint_manager,
     std::vector<int>& ordered_cell_indices,
-    const std::shared_ptr<keypose_graph_ns::KeyposeGraph>& keypose_graph = nullptr
+    const std::shared_ptr<keypose_graph_ns::KeyposeGraph>& keypose_graph,
+    const std::vector<int>& time_since_last_update
   );
   exploration_path_ns::ExplorationPath SolveGlobalTSP(
     const std::shared_ptr<viewpoint_manager_ns::ViewPointManager>& viewpoint_manager,

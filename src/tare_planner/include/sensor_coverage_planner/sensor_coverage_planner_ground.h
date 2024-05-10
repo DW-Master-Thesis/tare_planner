@@ -12,6 +12,7 @@
 
 #include <cmath>
 #include <vector>
+#include <chrono>
 
 #include <Eigen/Core>
 // ROS
@@ -263,6 +264,8 @@ private:
   std::vector<geometry_msgs::msg::Point> other_robot_state_estimations_;
   nav_msgs::msg::Path global_plan_;
   std::vector<nav_msgs::msg::Path> other_robot_global_plans_;
+  std::vector<int> time_since_last_update_;
+  std::vector<std::chrono::time_point<std::chrono::high_resolution_clock>> time_of_last_update_;
 
   std::shared_ptr<keypose_graph_ns::KeyposeGraph> keypose_graph_;
   std::shared_ptr<keypose_graph_ns::KeyposeGraph> merged_keypose_graph_;
@@ -390,6 +393,7 @@ private:
     std::vector<tare_planner_interfaces::msg::PlanningInterface>& planning_interfaces,
     std::vector<long int>& robot_ids
   );
+  void UpdateTimeSinceLastUpdate();
   void GlobalPlanning(std::vector<int>& global_cell_tsp_order, exploration_path_ns::ExplorationPath& global_path);
   void PublishGlobalPlanningVisualization(const exploration_path_ns::ExplorationPath& global_path,
                                           const exploration_path_ns::ExplorationPath& local_path);

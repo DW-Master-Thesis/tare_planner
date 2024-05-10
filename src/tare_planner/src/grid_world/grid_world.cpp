@@ -851,10 +851,15 @@ exploration_path_ns::ExplorationPath GridWorld::SolveGlobalVRP(
     const std::vector<nav_msgs::msg::Path>& other_robot_global_plans,
     const std::shared_ptr<viewpoint_manager_ns::ViewPointManager>& viewpoint_manager,
     std::vector<int>& ordered_cell_indices,
-    const std::shared_ptr<keypose_graph_ns::KeyposeGraph>& keypose_graph
+    const std::shared_ptr<keypose_graph_ns::KeyposeGraph>& keypose_graph,
+    const std::vector<int>& time_since_last_update
 )
 {
   distance_matrix_msg_ = global_plan_interfaces::msg::DistanceMatrix();
+  for (auto t: time_since_last_update)
+  {
+    distance_matrix_msg_.time_since_last_update.push_back(t);
+  }
   std::vector<global_plan_interfaces::msg::Robot> robots;
   std::vector<global_plan_interfaces::msg::Cell> cells;
   // Reset Explorating status and Has Robot status

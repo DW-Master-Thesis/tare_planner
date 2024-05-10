@@ -310,6 +310,8 @@ void SensorCoveragePlanner3D::InitializeData()
 
   last_robot_position_ = robot_position_;
 
+  time_of_last_update_.clear();
+
   for (int i = 0; i < kNumRobots; i++)
   {
     geometry_msgs::msg::Point robot_position;
@@ -317,8 +319,10 @@ void SensorCoveragePlanner3D::InitializeData()
     robot_position.y = 0;
     robot_position.z = 0;
     other_robot_state_estimations_.push_back(robot_position);
+    time_of_last_update_.push_back(std::chrono::high_resolution_clock::now());
   }
   other_robot_global_plans_ = std::vector<nav_msgs::msg::Path>(kNumRobots);
+  time_since_last_update_ = std::vector<int>(kNumRobots, 0);
 }
 
 SensorCoveragePlanner3D::SensorCoveragePlanner3D()
@@ -653,6 +657,8 @@ void SensorCoveragePlanner3D::PlanningInterfaceMergeResponseCallback(
   int requesting_robot_id = response_msg->requesting_robot_id;
   nav_msgs::msg::Path requesting_robot_global_plan = response_msg->requesting_robot_global_plan;
   other_robot_global_plans_[requesting_robot_id] = requesting_robot_global_plan;
+  time_of_last_update_[requesting_robot_id] = std::chrono::high_resolution_clock::now();
+  time_since_last_update_[requesting_robot_id] = 0;
 }
 
 void SensorCoveragePlanner3D::PlanningInterfaceRequestCallback()
@@ -907,6 +913,20 @@ void SensorCoveragePlanner3D::UpdateMergedPlanningInterface(
   grid_world_->UpdateNeighborCells(robot_position_);
 }
 
+void SensorCoveragePlanner3D::UpdateTimeSinceLastUpdate()
+{
+  for (int i = 0; i < kNumRobots; i++)
+  {
+    if (i == kRobotId)
+    {
+      continue;
+    }
+    time_since_last_update_[i] = std::chrono::duration_cast<std::chrono::seconds>(
+      std::chrono::high_resolution_clock::now() - time_of_last_update_[i]
+    ).count();
+  }
+}
+
 void SensorCoveragePlanner3D::GlobalPlanning(std::vector<int>& global_cell_tsp_order,
                                              exploration_path_ns::ExplorationPath& global_path)
 {
@@ -938,7 +958,8 @@ void SensorCoveragePlanner3D::GlobalPlanning(std::vector<int>& global_cell_tsp_o
     other_robot_global_plans_,
     viewpoint_manager_,
     global_cell_tsp_order,
-    merged_keypose_graph_
+    merged_keypose_graph_,
+    time_since_last_update_
   );
   // global_path = grid_world_->SolveGlobalTSP(viewpoint_manager_, global_cell_tsp_order, merged_keypose_graph_);
   UpdateKeyposeGraph();
@@ -1717,6 +1738,7 @@ void SensorCoveragePlanner3D::execute()
 
   double current_time = this->now().seconds();
   double delta_time = current_time - start_time_;
+  UpdateTimeSinceLastUpdate();
   RCLCPP_INFO(rclcpp::get_logger("EXPLORATION VOLUME"), "[Robot %d] %f: %f", kRobotId, delta_time, explored_volume_);
   RCLCPP_INFO(rclcpp::get_logger("EXPLORATION VOLUME"), "[Global] %f: %f", delta_time, global_explored_volume_);
 }
