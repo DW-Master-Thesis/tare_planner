@@ -265,7 +265,7 @@ private:
   nav_msgs::msg::Path global_plan_;
   std::vector<nav_msgs::msg::Path> other_robot_global_plans_;
   std::vector<int> time_since_last_update_;
-  std::vector<std::chrono::time_point<std::chrono::high_resolution_clock>> time_of_last_update_;
+  std::vector<rclcpp::Time> time_of_last_update_;
 
   std::shared_ptr<keypose_graph_ns::KeyposeGraph> keypose_graph_;
   std::shared_ptr<keypose_graph_ns::KeyposeGraph> merged_keypose_graph_;

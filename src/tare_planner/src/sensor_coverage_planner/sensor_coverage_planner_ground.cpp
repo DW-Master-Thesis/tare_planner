@@ -319,7 +319,7 @@ void SensorCoveragePlanner3D::InitializeData()
     robot_position.y = 0;
     robot_position.z = 0;
     other_robot_state_estimations_.push_back(robot_position);
-    time_of_last_update_.push_back(std::chrono::high_resolution_clock::now());
+    time_of_last_update_.push_back(this->now());
   }
   other_robot_global_plans_ = std::vector<nav_msgs::msg::Path>(kNumRobots);
   time_since_last_update_ = std::vector<int>(kNumRobots, 0);
@@ -657,13 +657,14 @@ void SensorCoveragePlanner3D::PlanningInterfaceMergeResponseCallback(
   int requesting_robot_id = response_msg->requesting_robot_id;
   nav_msgs::msg::Path requesting_robot_global_plan = response_msg->requesting_robot_global_plan;
   other_robot_global_plans_[requesting_robot_id] = requesting_robot_global_plan;
-  time_of_last_update_[requesting_robot_id] = std::chrono::high_resolution_clock::now();
+  time_of_last_update_[requesting_robot_id] = response_msg->stamp;
   time_since_last_update_[requesting_robot_id] = 0;
 }
 
 void SensorCoveragePlanner3D::PlanningInterfaceRequestCallback()
 {
   auto request = std::make_shared<tare_planner_interfaces::srv::MergePlanningInterface::Request>();
+  request->stamp = this->now();
   request->planning_interface.uncovered_point_num = uncovered_point_num_;
   request->planning_interface.uncovered_frontier_point_num = uncovered_frontier_point_num_;
   request->planning_interface.keypose_graph = keypose_graph_->ToMsg();
@@ -921,9 +922,9 @@ void SensorCoveragePlanner3D::UpdateTimeSinceLastUpdate()
     {
       continue;
     }
-    time_since_last_update_[i] = std::chrono::duration_cast<std::chrono::seconds>(
-      std::chrono::high_resolution_clock::now() - time_of_last_update_[i]
-    ).count();
+    uint64_t time_of_last_update_ns = time_of_last_update_[i].nanoseconds();
+    uint64_t time_since_last_update_ns = this->now().nanoseconds() - time_of_last_update_ns;
+    time_since_last_update_[i] = time_since_last_update_ns / 1e6;
   }
 }
 
@@ -944,22 +945,26 @@ void SensorCoveragePlanner3D::GlobalPlanning(std::vector<int>& global_cell_tsp_o
   grid_world_->UpdateCellKeyposeGraphNodes(merged_keypose_graph_);
   grid_world_->AddPathsInBetweenCells(viewpoint_manager_, merged_keypose_graph_);
   std::vector<geometry_msgs::msg::Point> other_robot_state_estimations;
-  for (int i = 0; i < other_robot_state_estimations_.size(); i++)
+  std::vector<nav_msgs::msg::Path> other_robot_global_plans;
+  std::vector<int> time_since_last_update;
+  for (int i = 0; i < kNumRobots; i++)
   {
     if (i == kRobotId)
     {
       continue;
     }
     other_robot_state_estimations.push_back(other_robot_state_estimations_[i]);
+    other_robot_global_plans.push_back(other_robot_global_plans_[i]);
+    time_since_last_update.push_back(time_since_last_update_[i]);
   }
   global_path = grid_world_->SolveGlobalVRP(
     other_robot_positions_,
     other_robot_state_estimations,
-    other_robot_global_plans_,
+    other_robot_global_plans,
     viewpoint_manager_,
     global_cell_tsp_order,
     merged_keypose_graph_,
-    time_since_last_update_
+    time_since_last_update
   );
   // global_path = grid_world_->SolveGlobalTSP(viewpoint_manager_, global_cell_tsp_order, merged_keypose_graph_);
   UpdateKeyposeGraph();

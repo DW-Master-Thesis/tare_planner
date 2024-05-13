@@ -1,3 +1,4 @@
+builtin_interfaces/Time stamp
 PlanningInterface planning_interface
 int64 robot_id
 nav_msgs/Path global_plan

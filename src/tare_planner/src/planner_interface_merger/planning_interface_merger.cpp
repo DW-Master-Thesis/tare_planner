@@ -104,6 +104,7 @@ void PlanningInterfaceMerger::handleMergePlanningInterface(
   uncoveredFrontierPointNumbers[robotId] = uncoveredFrontierPointNumber;
 
   tare_planner_interfaces::msg::MergerResponse published_msg;
+  published_msg.stamp = request->stamp;
   published_msg.requesting_robot_id = robotId;
   published_msg.requesting_robot_global_plan = request->global_plan;
   response->planning_interfaces.clear();
