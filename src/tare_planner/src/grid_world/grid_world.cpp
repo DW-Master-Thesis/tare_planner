@@ -973,10 +973,26 @@ exploration_path_ns::ExplorationPath GridWorld::SolveGlobalVRP(
         distance_matrix[i+1][j+1] = INT_MAX;
       }
       global_plan_interfaces::msg::ConnectionBetweenNodes connection;
-      connection.from_node_id = i;
-      connection.is_from_node_robot = true ? i < num_agents : false;
-      connection.to_node_id = j;
-      connection.is_to_node_robot = true ? j < num_agents : false;
+      if (i < num_agents)
+      {
+        connection.from_node_id = robots[i].id;
+        connection.is_from_node_robot = true;
+      }
+      else
+      {
+        connection.from_node_id = all_cell_indices[i];
+        connection.is_from_node_robot = false;
+      }
+      if (j < num_agents)
+      {
+        connection.to_node_id = robots[j].id;
+        connection.is_to_node_robot = true;
+      }
+      else
+      {
+        connection.to_node_id = all_cell_indices[j];
+        connection.is_to_node_robot = false;
+      }
       connection.distance = distance_matrix[i+1][j+1];
       connection.path = path;
       distance_matrix_msg_.connections.push_back(connection);
@@ -1012,7 +1028,15 @@ exploration_path_ns::ExplorationPath GridWorld::SolveGlobalVRP(
     global_plan_interfaces::msg::VrpRoute vrp_route;
     for (int j: route)
     {
-      vrp_route.route.push_back(all_cell_indices[j - 1]);
+      j--;
+      if (j < num_agents)
+      {
+        vrp_route.route.push_back(robots[j].id);
+      }
+      else
+      {
+        vrp_route.route.push_back(cells[j - num_agents].id);
+      }
     }
     distance_matrix_msg_.vrp_solution.push_back(vrp_route);
   }
