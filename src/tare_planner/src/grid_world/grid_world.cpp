@@ -1554,32 +1554,51 @@ exploration_path_ns::ExplorationPath GridWorld::SolveTSPWithCost(
   tsp_with_cost_solver_ns::TSPSolver tsp_solver(data_model);
   std::vector<int> solution = tsp_solver.Solve();
 
-  // Update exploring status
-  if (solution.size() > 1)
+  /****** Return home ******/
+  if (solution.size() <= 2)
   {
-    for (int j = 1; j < solution.size() - 1; j++)
+    exploration_path_ns::ExplorationPath global_path;
+    return_home_ = true;
+
+    geometry_msgs::msg::Point home_position = keypose_graph->GetFirstKeyposePosition();
+    int home_position_cell_ind_ = GetCellInd(home_position.x, home_position.y, home_position.z);
+    double return_home_distance;
+    nav_msgs::msg::Path return_home_path;
+    GetDistanceAndPathBetweenCells(cur_robot_cell_ind_, home_position_cell_ind_, return_home_distance, return_home_path, keypose_graph);
+    if (return_home_distance <= 0.0 || return_home_path.poses.size() < 2)
     {
-      int cell_ind = all_cell_indices[solution[j] - 1];
-      subspaces_->GetCell(cell_ind).SetExploringStatus(ExploringStatus::InGlobalPlan);
+      // Robot already home or home unreachable
+      return global_path;
     }
-    int cell_ind = all_cell_indices[solution[1] - 1];
-    subspaces_->GetCell(cell_ind).SetExploringStatus(ExploringStatus::NextInGlobalPlan);
+    global_path.FromPath(return_home_path);
+    for (int i = 1; i < global_path.nodes_.size() - 1; i++)
+    {
+      global_path.nodes_[i].type_ = exploration_path_ns::NodeType::GLOBAL_VIA_POINT;
+    }
+    global_path.nodes_.back().type_ = exploration_path_ns::NodeType::HOME;
+    // Make it a loop
+    for (int i = global_path.nodes_.size() - 2; i >= 0; i--)
+    {
+      global_path.Append(global_path.nodes_[i]);
+    }
+    return global_path;
   }
-  // for (int i = 1; i < num_agents; i++)
-  // {
-  //   if (solution[i].size() > 1)
-  //   {
-  //     for (int j = 1; j < solution[i].size() - 1; j++)
-  //     {
-  //       int cell_ind = all_cell_indices[solution[i][j] - 1];
-  //       subspaces_->GetCell(cell_ind).SetExploringStatus(ExploringStatus::InOtherGlobalPlan);
-  //     }
-  //   }
-  // }
+  return_home_ = false;
+
+  // Make it a loop
+  solution.push_back(solution[1]);
+
+  // Update exploring status
+  for (int j = 1; j < solution.size() - 1; j++)
+  {
+    int cell_ind = all_cell_indices[solution[j] - 1];
+    subspaces_->GetCell(cell_ind).SetExploringStatus(ExploringStatus::InGlobalPlan);
+  }
+  int cell_ind = all_cell_indices[solution[1] - 1];
+  subspaces_->GetCell(cell_ind).SetExploringStatus(ExploringStatus::NextInGlobalPlan);
   exploring_status_updated_ = true;
 
   ordered_cell_indices.clear();
-
   // Extract TSP solution
   exploration_path_ns::ExplorationPath global_path;
   Eigen::Vector3d cur_position;
