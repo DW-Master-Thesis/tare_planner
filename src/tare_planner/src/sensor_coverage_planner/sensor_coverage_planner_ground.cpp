@@ -525,7 +525,7 @@ void SensorCoveragePlanner3D::RegisteredScanCallback(
   planning_env_->UpdateRobotPosition(robot_position_);
   planning_env_->UpdateRegisteredCloud<pcl::PointXYZI>(registered_cloud_->cloud_);
 
-  registered_cloud_count_ = (registered_cloud_count_ + 1) % 5;
+  // registered_cloud_count_ = (registered_cloud_count_ + 1) % 2;
   if (registered_cloud_count_ == 0)
   {
     // initialized_ = true;

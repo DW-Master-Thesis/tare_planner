@@ -1586,7 +1586,7 @@ exploration_path_ns::ExplorationPath GridWorld::SolveTSPWithCost(
   return_home_ = false;
 
   // Make it a loop
-  solution.push_back(solution[1]);
+  solution.push_back(solution[0]);
 
   // Update exploring status
   for (int j = 1; j < solution.size() - 1; j++)
@@ -1644,23 +1644,20 @@ exploration_path_ns::ExplorationPath GridWorld::SolveTSPWithCost(
     global_path.Append(node);
 
     // Fill in the path in between
-    if (path.poses.size() >= 2)
+    for (int j = 1; j < path.poses.size() - 1; j++)
     {
-      for (int j = 1; j < path.poses.size() - 1; j++)
-      {
-        geometry_msgs::msg::Point node_position;
-        node_position = path.poses[j].pose.position;
-        exploration_path_ns::Node keypose_node(node_position, exploration_path_ns::NodeType::GLOBAL_VIA_POINT);
-        keypose_node.keypose_graph_node_ind_ = static_cast<int>(path.poses[j].pose.orientation.x);
-        global_path.Append(keypose_node);
-      }
+      geometry_msgs::msg::Point node_position;
+      node_position = path.poses[j].pose.position;
+      exploration_path_ns::Node keypose_node(node_position, exploration_path_ns::NodeType::GLOBAL_VIA_POINT);
+      keypose_node.keypose_graph_node_ind_ = static_cast<int>(path.poses[j].pose.orientation.x);
+      global_path.Append(keypose_node);
     }
   }
   // Append the robot node to the end
-  // if (!global_path.nodes_.empty())
-  // {
-  //   global_path.Append(global_path.nodes_[0]);
-  // }
+  if (!global_path.nodes_.empty())
+  {
+    global_path.Append(global_path.nodes_[0]);
+  }
   return global_path;
 }
 
