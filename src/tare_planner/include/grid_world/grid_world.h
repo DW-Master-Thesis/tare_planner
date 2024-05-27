@@ -26,6 +26,7 @@
 #include <grid/grid.h>
 #include <tsp_solver/tsp_solver.h>
 #include <vrp_solver/vrp_solver.h>
+#include <tsp_with_cost_solver/tsp_with_cost_solver.h>
 #include <keypose_graph/keypose_graph.h>
 #include <exploration_path/exploration_path.h>
 
@@ -370,12 +371,27 @@ public:
   void UpdateCellStatus(const std::shared_ptr<viewpoint_manager_ns::ViewPointManager>& viewpoint_manager, bool others=false);
   geometry_msgs::msg::Point GetCellCenterFromPosition(const geometry_msgs::msg::Point& position);
   exploration_path_ns::ExplorationPath SolveGlobalVRP(
-    const std::vector<geometry_msgs::msg::Point>& robot_positions,
-    const std::vector<geometry_msgs::msg::Point>& robot_state_estimations,
+    const std::vector<geometry_msgs::msg::Point>& other_robot_positions,
+    const std::vector<geometry_msgs::msg::Point>& other_robot_state_estimations,
     const std::vector<nav_msgs::msg::Path>& other_robot_global_plans,
     const std::shared_ptr<viewpoint_manager_ns::ViewPointManager>& viewpoint_manager,
     std::vector<int>& ordered_cell_indices,
     const std::shared_ptr<keypose_graph_ns::KeyposeGraph>& keypose_graph,
+    const std::vector<int>& time_since_last_update
+  );
+  exploration_path_ns::ExplorationPath SolveTSPWithCost(
+    const std::vector<geometry_msgs::msg::Point>& other_robot_positions,
+    const std::vector<geometry_msgs::msg::Point>& other_robot_state_estimations,
+    const std::vector<nav_msgs::msg::Path>& other_robot_global_plans,
+    const std::shared_ptr<viewpoint_manager_ns::ViewPointManager>& viewpoint_manager,
+    std::vector<int>& ordered_cell_indices,
+    const std::shared_ptr<keypose_graph_ns::KeyposeGraph>& keypose_graph,
+    const std::vector<int>& time_since_last_update
+  );
+  std::vector<int> CalcNodeReward(
+    const std::vector<geometry_msgs::msg::Point>& cell_positions,
+    const std::vector<geometry_msgs::msg::Point>& other_robot_positions,
+    const std::vector<nav_msgs::msg::Path>& other_robot_global_plans,
     const std::vector<int>& time_since_last_update
   );
   exploration_path_ns::ExplorationPath SolveGlobalTSP(

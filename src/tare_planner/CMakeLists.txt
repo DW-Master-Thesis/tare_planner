@@ -75,8 +75,13 @@ add_library(tsp_solver src/tsp_solver/tsp_solver.cpp)
 ament_target_dependencies(tsp_solver rclcpp std_msgs nav_msgs geometry_msgs sensor_msgs tf2_ros tf2_geometry_msgs tf2)
 target_link_libraries(tsp_solver ${catkin_LIBRARIES} ${CMAKE_CURRENT_SOURCE_DIR}/or-tools/lib/libortools.so ${CMAKE_CURRENT_SOURCE_DIR}/or-tools/lib/libglog.so)
 
+add_library(belief_state src/belief_state/belief_state.cpp)
+
 add_library(vrp_solver src/vrp_solver/vrp_solver.cpp)
 target_link_libraries(vrp_solver ${catkin_LIBRARIES} ${CMAKE_CURRENT_SOURCE_DIR}/or-tools/lib/libortools.so ${CMAKE_CURRENT_SOURCE_DIR}/or-tools/lib/libglog.so ${CMAKE_CURRENT_SOURCE_DIR}/or-tools/lib/libprotobuf.so)
+
+add_library(tsp_with_cost_solver src/tsp_with_cost_solver/tsp_with_cost_solver.cpp)
+target_link_libraries(tsp_with_cost_solver ${catkin_LIBRARIES} ${CMAKE_CURRENT_SOURCE_DIR}/or-tools/lib/libortools.so ${CMAKE_CURRENT_SOURCE_DIR}/or-tools/lib/libglog.so ${CMAKE_CURRENT_SOURCE_DIR}/or-tools/lib/libprotobuf.so)
 
 add_library(viewpoint src/viewpoint/viewpoint.cpp)
 ament_target_dependencies(viewpoint rclcpp std_msgs nav_msgs geometry_msgs sensor_msgs tf2_ros tf2_geometry_msgs tf2 tare_planner_interfaces)
@@ -96,7 +101,7 @@ target_link_libraries(local_coverage_planner ${catkin_LIBRARIES} viewpoint_manag
 
 add_library(grid_world src/grid_world/grid_world.cpp)
 ament_target_dependencies(grid_world rclcpp std_msgs nav_msgs geometry_msgs sensor_msgs tf2_ros tf2_geometry_msgs tf2 tare_planner_interfaces global_plan_interfaces)
-target_link_libraries(grid_world ${catkin_LIBRARIES} viewpoint_manager tsp_solver vrp_solver keypose_graph exploration_path)
+target_link_libraries(grid_world ${catkin_LIBRARIES} viewpoint_manager tsp_solver vrp_solver tsp_with_cost_solver keypose_graph exploration_path belief_state)
 
 add_library(pointcloud_manager src/pointcloud_manager/pointcloud_manager.cpp)
 ament_target_dependencies(pointcloud_manager rclcpp std_msgs nav_msgs geometry_msgs sensor_msgs tf2_ros tf2_geometry_msgs tf2 pcl_ros pcl_conversions visualization_msgs)

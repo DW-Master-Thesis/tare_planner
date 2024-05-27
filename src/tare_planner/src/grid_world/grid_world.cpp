@@ -14,9 +14,7 @@
 #include <algorithm>
 #include <utils/misc_utils.h>
 #include <viewpoint_manager/viewpoint_manager.h>
-#include <global_plan_interfaces/msg/cell.hpp>
-#include <global_plan_interfaces/msg/robot.hpp>
-#include <global_plan_interfaces/msg/connection_between_nodes.hpp>
+#include <belief_state/belief_state.h>
 
 namespace grid_world_ns
 {
@@ -1442,6 +1440,252 @@ exploration_path_ns::ExplorationPath GridWorld::SolveGlobalTSP(
   // std::cout << std::endl;
 
   return global_path;
+}
+
+exploration_path_ns::ExplorationPath GridWorld::SolveTSPWithCost(
+    const std::vector<geometry_msgs::msg::Point>& other_robot_positions,
+    const std::vector<geometry_msgs::msg::Point>& other_robot_state_estimations,
+    const std::vector<nav_msgs::msg::Path>& other_robot_global_plans,
+    const std::shared_ptr<viewpoint_manager_ns::ViewPointManager>& viewpoint_manager,
+    std::vector<int>& ordered_cell_indices,
+    const std::shared_ptr<keypose_graph_ns::KeyposeGraph>& keypose_graph,
+    const std::vector<int>& time_since_last_update
+)
+{
+  // Reset Explorating status and Has Robot status
+  for (int cell_ind = 0; cell_ind < subspaces_->GetCellNumber(); cell_ind++)
+  {
+    subspaces_->GetCell(cell_ind).SetExploringStatus(ExploringStatus::NotInGlobalPlan);
+    subspaces_->GetCell(cell_ind).SetHasRobot(false);
+  }
+
+  // Get cell indices of robots
+  std::vector<int> all_cell_indices;
+  all_cell_indices.push_back(GetCellInd(robot_position_.x, robot_position_.y, robot_position_.z));
+  // Get exploring cell inidices 
+  std::vector<int> exploring_cell_indices;
+  std::vector<int> reachable_exploring_cell_indices;
+  std::vector<geometry_msgs::msg::Point> reachable_exploring_cell_positions;
+  GetExploringCellIndices(exploring_cell_indices);
+  for (int i: exploring_cell_indices)
+  {
+    double distance;
+    nav_msgs::msg::Path path;
+    GetDistanceAndPathBetweenCells(cur_robot_cell_ind_, i, distance, path, keypose_graph);
+    if (distance > 0.0 && path.poses.size() > 1)
+    {
+      all_cell_indices.push_back(i);
+      reachable_exploring_cell_indices.push_back(i);
+      reachable_exploring_cell_positions.push_back(GetCellPosition(i));
+    }
+  }
+
+  /****** Return home ******/
+  if (reachable_exploring_cell_indices.empty())
+  {
+    exploration_path_ns::ExplorationPath global_path;
+    return_home_ = true;
+
+    geometry_msgs::msg::Point home_position = keypose_graph->GetFirstKeyposePosition();
+    int home_position_cell_ind_ = GetCellInd(home_position.x, home_position.y, home_position.z);
+    double return_home_distance;
+    nav_msgs::msg::Path return_home_path;
+    GetDistanceAndPathBetweenCells(cur_robot_cell_ind_, home_position_cell_ind_, return_home_distance, return_home_path, keypose_graph);
+    if (return_home_distance <= 0.0 || return_home_path.poses.size() < 2)
+    {
+      // Robot already home or home unreachable
+      return global_path;
+    }
+    global_path.FromPath(return_home_path);
+    for (int i = 1; i < global_path.nodes_.size() - 1; i++)
+    {
+      global_path.nodes_[i].type_ = exploration_path_ns::NodeType::GLOBAL_VIA_POINT;
+    }
+    global_path.nodes_.back().type_ = exploration_path_ns::NodeType::HOME;
+    // Make it a loop
+    for (int i = global_path.nodes_.size() - 2; i >= 0; i--)
+    {
+      global_path.Append(global_path.nodes_[i]);
+    }
+    return global_path;
+  }
+
+  return_home_ = false;
+
+  // Construct distance matrix
+  int num_nodes = reachable_exploring_cell_indices.size();
+  int distance_matrix_size = num_nodes + 2; // +2 for depot and vehicle
+  std::vector<std::vector<int>> distance_matrix(distance_matrix_size, std::vector<int>(distance_matrix_size, 0));
+
+  for (int i = 0; i < distance_matrix_size - 1; i++)
+  {
+    for (int j = 0; j < i; j++)
+    {
+      nav_msgs::msg::Path path;
+      double distance;
+      GetDistanceAndPathBetweenCells(all_cell_indices[i], all_cell_indices[j], distance, path, keypose_graph);
+      distance_matrix[i+1][j+1] = (int) 10 * distance;
+      if (distance_matrix[i+1][j+1] <= 0)
+      {
+        distance_matrix[i+1][j+1] = INT_MAX;
+      }
+    }
+  }
+  for (int i = 0; i < distance_matrix_size; i++)
+  {
+    for (int j = i + 1; j < distance_matrix_size; j++)
+    {
+      distance_matrix[i][j] = distance_matrix[j][i];
+    }
+  }
+
+  // Calculate the reward for each node
+  std::vector<int> node_rewards = CalcNodeReward(
+    reachable_exploring_cell_positions,
+    other_robot_positions,
+    other_robot_global_plans,
+    time_since_last_update
+  );
+
+  /****** Solve the TSP ******/
+  tsp_with_cost_solver_ns::DataModel data_model;
+  data_model.distance_matrix = distance_matrix;
+  data_model.rewards = node_rewards;
+  RCLCPP_INFO(rclcpp::get_logger("DEBUG"), "Solving TSP with cost");
+  tsp_with_cost_solver_ns::TSPSolver tsp_solver(data_model);
+  std::vector<int> solution = tsp_solver.Solve();
+  RCLCPP_INFO(rclcpp::get_logger("DEBUG"), "Solved TSP with cost");
+  RCLCPP_INFO(rclcpp::get_logger("DEBUG"), "Solution :");
+  for (int i = 0; i < solution.size(); i++)
+  {
+    RCLCPP_INFO(rclcpp::get_logger("DEBUG"), "%d", solution[i]);
+  }
+
+  // Update exploring status
+  if (solution.size() > 1)
+  {
+    for (int j = 1; j < solution.size() - 1; j++)
+    {
+      int cell_ind = all_cell_indices[solution[j] - 1];
+      subspaces_->GetCell(cell_ind).SetExploringStatus(ExploringStatus::InGlobalPlan);
+    }
+    int cell_ind = all_cell_indices[solution[1] - 1];
+    subspaces_->GetCell(cell_ind).SetExploringStatus(ExploringStatus::NextInGlobalPlan);
+  }
+  // for (int i = 1; i < num_agents; i++)
+  // {
+  //   if (solution[i].size() > 1)
+  //   {
+  //     for (int j = 1; j < solution[i].size() - 1; j++)
+  //     {
+  //       int cell_ind = all_cell_indices[solution[i][j] - 1];
+  //       subspaces_->GetCell(cell_ind).SetExploringStatus(ExploringStatus::InOtherGlobalPlan);
+  //     }
+  //   }
+  // }
+  exploring_status_updated_ = true;
+
+  ordered_cell_indices.clear();
+
+  // Extract TSP solution
+  exploration_path_ns::ExplorationPath global_path;
+  Eigen::Vector3d cur_position;
+  int cur_ind, next_ind;
+  int cur_cell_ind, next_cell_ind;
+
+  for (int i = 0; i < solution.size() - 1; i++)
+  {
+    cur_ind = solution[i] -  1;
+    next_ind = solution[i + 1] - 1;
+    cur_cell_ind = all_cell_indices[cur_ind];
+    next_cell_ind = all_cell_indices[next_ind];
+    cur_position = subspaces_->GetCell(cur_cell_ind).GetRoadmapConnectionPoint();
+
+    double distance;
+    nav_msgs::msg::Path path;
+    GetDistanceAndPathBetweenCells(cur_cell_ind, next_cell_ind, distance, path, keypose_graph);
+    path = misc_utils_ns::SimplifyPath(path);
+    if (path.poses.size() < 2)
+    {
+      continue;
+    }
+
+    exploration_path_ns::Node node(cur_position);
+    if (i == 0)
+    {
+      node.type_ = exploration_path_ns::NodeType::ROBOT;
+    }
+    else
+    {
+      node.type_ = exploration_path_ns::NodeType::GLOBAL_VIEWPOINT;
+    }
+    if (cur_ind >= 1)
+    {
+      node.global_subspace_index_ = all_cell_indices[cur_ind];
+      ordered_cell_indices.push_back(all_cell_indices[cur_ind]);
+    }
+    else
+    {
+      node.global_subspace_index_ = -1;
+      ordered_cell_indices.push_back(-1);
+    }
+    global_path.Append(node);
+
+    // Fill in the path in between
+    if (path.poses.size() >= 2)
+    {
+      for (int j = 1; j < path.poses.size() - 1; j++)
+      {
+        geometry_msgs::msg::Point node_position;
+        node_position = path.poses[j].pose.position;
+        exploration_path_ns::Node keypose_node(node_position, exploration_path_ns::NodeType::GLOBAL_VIA_POINT);
+        keypose_node.keypose_graph_node_ind_ = static_cast<int>(path.poses[j].pose.orientation.x);
+        global_path.Append(keypose_node);
+      }
+    }
+  }
+  // Append the robot node to the end
+  // if (!global_path.nodes_.empty())
+  // {
+  //   global_path.Append(global_path.nodes_[0]);
+  // }
+  return global_path;
+}
+
+std::vector<int> GridWorld::CalcNodeReward(
+    const std::vector<geometry_msgs::msg::Point>& cell_positions,
+    const std::vector<geometry_msgs::msg::Point>& other_robot_positions,
+    const std::vector<nav_msgs::msg::Path>& other_robot_global_plans,
+    const std::vector<int>& time_since_last_update
+)
+{
+  std::vector<belief_state_ns::BeliefState> belief_states;
+  for (int i = 0; i < other_robot_positions.size(); i++)
+  {
+    belief_state_ns::Position position(other_robot_positions[i].x, other_robot_positions[i].y);
+    belief_state_ns::Path path;
+    for (int j = 0; j < other_robot_global_plans[i].poses.size(); j++)
+    {
+      belief_state_ns::Position position(other_robot_global_plans[i].poses[j].pose.position.x,
+                                         other_robot_global_plans[i].poses[j].pose.position.y);
+      path.append(position);
+    }
+    double limit = time_since_last_update[i] / 1000.0 * 2;
+    belief_state_ns::BeliefState belief_state(position, path, limit);
+    belief_states.push_back(belief_state);
+  }
+
+  belief_state_ns::AggregatedBeliefState aggregate_belief_state(belief_states);
+
+  int rewards_vec_size = cell_positions.size() + 2;
+  std::vector<int> rewards(rewards_vec_size, 0);
+  for (int i = 0; i < cell_positions.size(); i++)
+  {
+    belief_state_ns::Position position(cell_positions[i].x, cell_positions[i].y);
+    double cost = aggregate_belief_state.calc_cost(position);
+    rewards[i+2] = static_cast<int>(1000 * (1 - cost));
+  }
+  return rewards;
 }
 
 int GridWorld::GetCellKeyposeID(int cell_ind)
