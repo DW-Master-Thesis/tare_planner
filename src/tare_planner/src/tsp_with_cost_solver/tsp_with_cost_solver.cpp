@@ -25,7 +25,8 @@ TSPSolver::TSPSolver(const DataModel& data)
     const int from_node = manager_->IndexToNode(from_index).value();
     const int to_node = manager_->IndexToNode(to_index).value();
     int combined_rew = data_.distance_matrix[from_node][to_node] - data_.rewards[to_node] / 10;
-    std::cout << "from_node: " << from_node << " to_node: " << to_node << " distance: " << data_.distance_matrix[from_node][to_node] << " reward: " << data_.rewards[to_node] << " combined: " << combined_rew << std::endl;
+    if (combined_rew < 0)
+      return 0;
     return combined_rew;
   };
 

@@ -1551,15 +1551,8 @@ exploration_path_ns::ExplorationPath GridWorld::SolveTSPWithCost(
   tsp_with_cost_solver_ns::DataModel data_model;
   data_model.distance_matrix = distance_matrix;
   data_model.rewards = node_rewards;
-  RCLCPP_INFO(rclcpp::get_logger("DEBUG"), "Solving TSP with cost");
   tsp_with_cost_solver_ns::TSPSolver tsp_solver(data_model);
   std::vector<int> solution = tsp_solver.Solve();
-  RCLCPP_INFO(rclcpp::get_logger("DEBUG"), "Solved TSP with cost");
-  RCLCPP_INFO(rclcpp::get_logger("DEBUG"), "Solution :");
-  for (int i = 0; i < solution.size(); i++)
-  {
-    RCLCPP_INFO(rclcpp::get_logger("DEBUG"), "%d", solution[i]);
-  }
 
   // Update exploring status
   if (solution.size() > 1)
