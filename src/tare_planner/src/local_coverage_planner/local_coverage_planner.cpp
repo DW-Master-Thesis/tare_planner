@@ -401,17 +401,11 @@ exploration_path_ns::ExplorationPath LocalCoveragePlanner::SolveTSP(const std::v
   // Get distance matrix
   int node_size;
   if (has_start_end_dummy && has_robot_lookahead_dummy)
-  {
     node_size = selected_viewpoint_indices.size() + 2;
-  }
   else if (has_start_end_dummy || has_robot_lookahead_dummy)
-  {
     node_size = selected_viewpoint_indices.size() + 1;
-  }
   else
-  {
     node_size = selected_viewpoint_indices.size();
-  }
   misc_utils_ns::Timer find_path_timer("find path");
   find_path_timer.Start();
   std::vector<std::vector<int>> distance_matrix(node_size, std::vector<int>(node_size, 0));
@@ -433,7 +427,11 @@ exploration_path_ns::ExplorationPath LocalCoveragePlanner::SolveTSP(const std::v
         (
           viewpoint_manager_->ViewPointInNextGlobalPlanNode(to_ind) &&
           from_ind == robot_viewpoint_ind_
-        )
+        ) ||
+        (
+          viewpoint_manager_->ViewPointInNextGlobalPlanNode(from_ind) &&
+          viewpoint_manager_->ViewPointInNextGlobalPlanNode(to_ind)
+        ) 
       )
       {
         path_length = 0;
