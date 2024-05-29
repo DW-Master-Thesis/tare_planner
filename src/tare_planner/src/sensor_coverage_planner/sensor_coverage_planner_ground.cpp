@@ -888,7 +888,7 @@ void SensorCoveragePlanner3D::UpdateMergedPlanningInterface(
     }
     other_keypose_graph.FromMsg(planning_interfaces[i].keypose_graph);
     merged_keypose_graph_ = std::make_shared<keypose_graph_ns::KeyposeGraph>(
-      keypose_graph_ns::KeyposeGraph::merge(shared_from_this(), *merged_keypose_graph_, other_keypose_graph, *planning_env_)
+      keypose_graph_ns::KeyposeGraph::merge(shared_from_this(), *merged_keypose_graph_, other_keypose_graph)
     );
   }
 
@@ -937,7 +937,7 @@ void SensorCoveragePlanner3D::GlobalPlanning(std::vector<int>& global_cell_tsp_o
   global_tsp_timer.Start();
 
   merged_keypose_graph_ = std::make_shared<keypose_graph_ns::KeyposeGraph>(
-    keypose_graph_ns::KeyposeGraph::merge(shared_from_this(), *merged_keypose_graph_, *keypose_graph_, *planning_env_)
+    keypose_graph_ns::KeyposeGraph::merge(shared_from_this(), *merged_keypose_graph_, *keypose_graph_)
   );
   merged_keypose_graph_->CheckLocalCollision(robot_position_, viewpoint_manager_);
   merged_keypose_graph_->CheckConnectivity(robot_position_);
