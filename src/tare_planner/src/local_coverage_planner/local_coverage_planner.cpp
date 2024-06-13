@@ -851,16 +851,6 @@ exploration_path_ns::ExplorationPath LocalCoveragePlanner::SolveLocalCoveragePro
     }
   }
   // Plan a path only for viewpoints consistent with global path
-  filtered_viewpoint_indices = FilterViewpoints(ordered_viewpoint_indices);
-  GetNavigationViewPointIndices(global_path, filtered_viewpoint_indices);
-  if (filtered_viewpoint_indices.size() > 0)
-  {
-    exploration_path_ns::ExplorationPath filtered_local_path = SolveTSP(filtered_viewpoint_indices, ordered_viewpoint_indices);
-    if (filtered_local_path.GetNodeNum() > 1)
-    {
-      local_path = filtered_local_path;
-    }
-  }
   return local_path;
 }
 
